@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2D5F3F" />
+  <title>Преподаватели</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700&family=Manrope:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="page-teachers">
+
+  <!-- ============== HEADER (desktop only) ============== -->
+  <header class="site-header" id="siteHeader">
+    <div class="container header-inner">
+      <a href="index.html" class="brand" aria-label="На главную">
+        <span class="brand-mark"><img src="assets/images/logo.png" alt="" loading="lazy" /></span>
+      </a>
+
+      <nav class="main-nav" aria-label="Основная навигация">
+        <a href="index.html" class="nav-link">Главная</a>
+        <a href="booking.html" class="nav-link">Записи</a>
+        <a href="schedule.html" class="nav-link">Расписание</a>
+        <a href="teachers.html" class="nav-link active">Преподаватели</a>
+        <a href="#" class="nav-link">Профиль</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="icon-btn" aria-label="Уведомления">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 8a6 6 0 0 1 12 0v5l1.5 3h-15L6 13V8Z M10 19a2 2 0 0 0 4 0"
+              fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="teachers-main">
+    <!-- ============== HERO ============== -->
+    <section class="teachers-hero">
+      <div class="teachers-hero__bg"></div>
+      <div class="teachers-hero__fade"></div>
+
+      <div class="container teachers-hero__inner">
+        <!-- Welcome card -->
+        <article class="welcome-card" data-render="welcome-card"></article>
+
+        <div class="teachers-hero__head">
+          <h1 class="teachers-hero__title" data-render="teachers-title">Преподаватели</h1>
+          <p class="teachers-hero__subtitle" data-render="teachers-subtitle">Выберите преподавателя для обучения</p>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-chips" data-render="teachers-filters"></div>
+      </div>
+    </section>
+
+    <!-- ============== TEACHERS LIST ============== -->
+    <section class="teachers-content">
+      <div class="container">
+        <div class="teachers-list" data-render="teachers-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============== FOOTER ============== -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <a href="index.html" class="brand">
+        <span class="brand-mark"><img src="assets/images/logo.png" alt="" loading="lazy" /></span>
+      </a>
+      <nav class="footer-nav">
+        <a href="index.html">Главная</a>
+        <a href="schedule.html">Записи</a>
+        <a href="teachers.html">Преподаватели</a>
+        <a href="#">Профиль</a>
+      </nav>
+      <span class="footer-copy">© 2026</span>
+    </div>
+  </footer>
+
+  <!-- ============== MOBILE BOTTOM NAV ============== -->
+  <nav class="mobile-tabs" aria-label="Мобильная навигация">
+    <a class="tab" href="index.html">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 11 12 4l8 7v9a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1Z" fill="currentColor" />
+        </svg>
+      </span>
+      <span class="tab-label">Главная</span>
+    </a>
+    <a class="tab" href="booking.html">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3.5" y="5" width="17" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.7" />
+          <path d="M3.5 10h17 M8 3v4 M16 3v4 M12 13v5 M9.5 15.5h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+        </svg>
+      </span>
+      <span class="tab-label">Записи</span>
+    </a>
+    <a class="tab" href="schedule.html">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3.5" y="5" width="17" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.7" />
+          <path d="M3.5 10h17 M8 3v4 M16 3v4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+        </svg>
+      </span>
+      <span class="tab-label">Расписание</span>
+    </a>
+    <a class="tab active" href="teachers.html">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="9" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.7" />
+          <circle cx="17" cy="9.5" r="2.6" fill="none" stroke="currentColor" stroke-width="1.7" />
+          <path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5 M14.5 19c.3-2.4 2-3.7 4.5-3.7s3.5 1.3 3.8 3.7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+        </svg>
+      </span>
+      <span class="tab-label">Преподаватели</span>
+    </a>
+    <a class="tab" href="#">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.7" />
+          <path d="M4 21c0-4 4-6 8-6s8 2 8 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+        </svg>
+      </span>
+      <span class="tab-label">Профиль</span>
+    </a>
+  </nav>
+
+  <script src="data.js"></script>
+  <script src="_config.js"></script>
+  <script src="api.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

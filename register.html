@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2D5F3F" />
+  <title>Регистрация</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700&family=Manrope:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="page-register">
+
+  <main>
+    <div class="auth-card">
+      <a href="index.html" class="auth-brand" aria-label="На главную">
+        <span class="brand-mark"><img src="assets/images/logo.png" alt="" loading="lazy" /></span>
+      </a>
+
+      <h1 class="auth-title">Регистрация</h1>
+      <p class="auth-subtitle">Создайте новый аккаунт</p>
+
+      <form class="auth-form" id="registerForm" novalidate>
+        <div class="auth-field">
+          <label for="name">Имя</label>
+          <input class="auth-input" id="name" name="name" type="text"
+                 autocomplete="name" required minlength="2" />
+        </div>
+        <div class="auth-field">
+          <label for="email">Email</label>
+          <input class="auth-input" id="email" name="email" type="email"
+                 autocomplete="email" required />
+        </div>
+        <div class="auth-field">
+          <label for="password">Пароль</label>
+          <input class="auth-input" id="password" name="password" type="password"
+                 autocomplete="new-password" required minlength="6" />
+        </div>
+        <p class="auth-error" id="authError"></p>
+        <button type="submit" class="btn btn--primary auth-submit" id="authSubmit">
+          Зарегистрироваться
+        </button>
+      </form>
+
+      <p class="auth-foot">
+        Уже есть аккаунт? <a href="login.html">Войти</a>
+      </p>
+    </div>
+  </main>
+
+  <!-- ============== MOBILE BOTTOM NAV ============== -->
+  <nav class="mobile-tabs" aria-label="Мобильная навигация">
+    <a class="tab" href="index.html">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 11 12 4l8 7v9a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1Z" fill="currentColor" />
+        </svg>
+      </span>
+      <span class="tab-label">Главная</span>
+    </a>
+    <a class="tab" href="booking.html">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3.5" y="5" width="17" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.7" />
+          <path d="M3.5 10h17 M8 3v4 M16 3v4 M12 13v5 M9.5 15.5h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+        </svg>
+      </span>
+      <span class="tab-label">Записи</span>
+    </a>
+    <a class="tab" href="schedule.html">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3.5" y="5" width="17" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.7" />
+          <path d="M3.5 10h17 M8 3v4 M16 3v4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+        </svg>
+      </span>
+      <span class="tab-label">Расписание</span>
+    </a>
+    <a class="tab" href="teachers.html">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="9" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.7" />
+          <circle cx="17" cy="9.5" r="2.6" fill="none" stroke="currentColor" stroke-width="1.7" />
+          <path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5 M14.5 19c.3-2.4 2-3.7 4.5-3.7s3.5 1.3 3.8 3.7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+        </svg>
+      </span>
+      <span class="tab-label">Преподаватели</span>
+    </a>
+    <a class="tab active" href="login.html">
+      <span class="tab-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.7" />
+          <path d="M4 21c0-4 4-6 8-6s8 2 8 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+        </svg>
+      </span>
+      <span class="tab-label">Профиль</span>
+    </a>
+  </nav>
+
+  <script src="_config.js"></script>
+  <script src="api.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
