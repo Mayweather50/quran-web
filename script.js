@@ -839,6 +839,11 @@
           `;
         }).join('')}
       </div>
+      <div class="booking-calendar-legend" aria-label="Обозначения календаря">
+        <span><i class="legend-dot legend-dot--free"></i>Свободно</span>
+        <span><i class="legend-dot legend-dot--booked"></i>Есть записи</span>
+        <span><i class="legend-dot legend-dot--empty"></i>Нет слотов</span>
+      </div>
     `;
 
     // Day clicks
