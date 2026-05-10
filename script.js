@@ -2678,6 +2678,73 @@
     });
   }
 
+  function renderProfileBookingsCard(bookings, loadError) {
+    const list = (bookings || [])
+      .filter((b) => ['pending', 'confirmed'].includes(b.status))
+      .sort((a, b) => {
+        const ad = `${bookingDateOf(a)} ${bookingTimeOf(a)}`;
+        const bd = `${bookingDateOf(b)} ${bookingTimeOf(b)}`;
+        return ad.localeCompare(bd);
+      })
+      .slice(0, 8);
+
+    let body;
+    if (loadError) {
+      body = `
+        <div class="profile-bookings-empty">
+          <strong>Не удалось загрузить записи</strong>
+          <span>Обновите страницу или откройте расписание.</span>
+        </div>`;
+    } else if (!list.length) {
+      body = `
+        <div class="profile-bookings-empty">
+          <strong>Активных записей пока нет</strong>
+          <span>Когда вы запишетесь на урок, дата и время появятся здесь.</span>
+          <a class="btn btn--primary" href="booking.html">Записаться</a>
+        </div>`;
+    } else {
+      body = `
+        <div class="profile-bookings-list">
+          ${list.map((b) => {
+            const dateIso = bookingDateOf(b);
+            const time = bookingTimeOf(b) || '—';
+            const teacher = b.teacher_name || 'Преподаватель';
+            const discipline = b.discipline || 'Урок';
+            const format = b.is_public ? 'Группа' : 'Индивидуально';
+            const status = b.status || 'pending';
+            const meeting = b.meeting_url
+              ? `<a href="${escapeAttr(b.meeting_url)}" target="_blank" rel="noopener">Ссылка на урок</a>`
+              : `<span>Ссылка появится после подтверждения</span>`;
+
+            return `
+              <article class="profile-booking-card">
+                <div class="profile-booking-time">
+                  <strong>${escapeHTML(time)}</strong>
+                  <span>${escapeHTML(russianDateWithYear(dateIso))}</span>
+                </div>
+                <div class="profile-booking-main">
+                  <h3>${escapeHTML(teacher)}</h3>
+                  <p>${escapeHTML(discipline)} · ${escapeHTML(format)}</p>
+                  <div class="profile-booking-link">${meeting}</div>
+                </div>
+                <span class="profile-booking-status profile-booking-status--${escapeAttr(status)}">
+                  ${escapeHTML(statusLabelFor(status))}
+                </span>
+              </article>`;
+          }).join('')}
+        </div>`;
+    }
+
+    return `
+      <section class="panel-card profile-bookings-card">
+        <div class="panel-card-head">
+          <h2>Мои записи</h2>
+          <a href="schedule.html">Расписание</a>
+        </div>
+        ${body}
+      </section>`;
+  }
+
   async function initProfile() {
     const root = $('[data-render="profile-page"]');
     if (!root) return;
@@ -2694,6 +2761,18 @@
     } catch (err) {
       root.innerHTML = `<p class="empty-state">Не удалось загрузить профиль (${err.status || 'сеть'})</p>`;
       return;
+    }
+
+    let myBookings = [];
+    let myBookingsError = null;
+    if (me.role === 'student') {
+      try {
+        const rows = await API.get(`/bookings?scope=mine&from=${todayIsoLocal()}`);
+        myBookings = Array.isArray(rows) ? rows : [];
+      } catch (err) {
+        myBookingsError = err;
+        console.warn('Не удалось загрузить записи профиля:', err);
+      }
     }
 
     const roleLabel = ({ student: 'Ученик', teacher: 'Преподаватель', admin: 'Администратор' })[me.role] || me.role;
@@ -2735,6 +2814,8 @@
         </div>
         <p class="panel-msg" id="nameMsg"></p>
       </section>
+
+      ${me.role === 'student' ? renderProfileBookingsCard(myBookings, myBookingsError) : ''}
 
       <section class="panel-card">
         <h2>Сменить пароль</h2>
