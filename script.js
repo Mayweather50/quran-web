@@ -438,12 +438,31 @@
     `;
   }
 
+  function renderScheduleEmpty({ title, text, iconName, actionLabel, actionHref } = {}) {
+    return `
+      <article class="schedule-empty-card">
+        <span class="schedule-empty-card__icon">${icon(iconName || 'moon')}</span>
+        <div class="schedule-empty-card__body">
+          <h3>${escapeHTML(title || 'Уроков нет')}</h3>
+          <p>${escapeHTML(text || 'Выберите другой день в календаре или запишитесь на новый онлайн-урок.')}</p>
+        </div>
+        ${actionHref ? `<a class="schedule-empty-card__action" href="${escapeAttr(actionHref)}">${escapeHTML(actionLabel || 'Записаться')}</a>` : ''}
+      </article>
+    `;
+  }
+
   function renderUpcomingFromAPI(items, emptyMessage = 'Ближайших уроков пока нет') {
     const slot = $('[data-render="upcoming"]');
     if (!slot) return;
 
     if (!items || !items.length) {
-      slot.innerHTML = `<p class="empty-state">${emptyMessage}</p>`;
+      slot.innerHTML = renderScheduleEmpty({
+        title: emptyMessage,
+        text: 'В этот день у вас нет занятий. Можно выбрать другую дату или записаться на новый урок.',
+        iconName: 'moon',
+        actionLabel: 'Записаться',
+        actionHref: 'booking.html',
+      });
       return;
     }
 
@@ -514,7 +533,13 @@
     if (!slot) return;
 
     if (!items || !items.length) {
-      slot.innerHTML = `<p class="empty-state">${emptyMessage}</p>`;
+      slot.innerHTML = renderScheduleEmpty({
+        title: emptyMessage,
+        text: 'Когда появятся будущие онлайн-занятия, они сразу отобразятся здесь.',
+        iconName: 'calendar-add',
+        actionLabel: 'Выбрать урок',
+        actionHref: 'booking.html',
+      });
       return;
     }
 
