@@ -1199,23 +1199,28 @@ svg { width: 100%; height: 100%; }
 .cal-cell .dot--green { background: var(--primary); }
 .cal-cell .dot--gold  { background: var(--gold); }
 .cal-cell.is-selected .dot { display: none; }
-.page-booking .cal-cell.has-event {
+.page-booking .cal-cell.has-event,
+.page-schedule .cal-cell.has-event {
   isolation: isolate;
 }
-.page-booking .cal-cell.has-event .d {
+.page-booking .cal-cell.has-event .d,
+.page-schedule .cal-cell.has-event .d {
   position: relative;
   z-index: 1;
 }
-.page-booking .cal-cell.has-event--green:not(.is-selected) {
+.page-booking .cal-cell.has-event--green:not(.is-selected),
+.page-schedule .cal-cell.has-event--green:not(.is-selected) {
   background: rgba(45,95,63,0.06);
   box-shadow: inset 0 0 0 1px rgba(45,95,63,0.14);
 }
-.page-booking .cal-cell.has-event--gold:not(.is-selected) {
+.page-booking .cal-cell.has-event--gold:not(.is-selected),
+.page-schedule .cal-cell.has-event--gold:not(.is-selected) {
   background: linear-gradient(160deg, rgba(232,192,121,0.38), rgba(255,255,255,0.84));
   color: var(--primary-dark);
   box-shadow: inset 0 0 0 1px rgba(196,154,79,0.62), 0 6px 14px rgba(196,154,79,0.18);
 }
-.page-booking .cal-cell.has-event--gold:not(.is-selected)::before {
+.page-booking .cal-cell.has-event--gold:not(.is-selected)::before,
+.page-schedule .cal-cell.has-event--gold:not(.is-selected)::before {
   content: "";
   position: absolute;
   inset: 5px;
@@ -1223,7 +1228,8 @@ svg { width: 100%; height: 100%; }
   border: 1px solid rgba(196,154,79,0.22);
   pointer-events: none;
 }
-.page-booking .cal-cell.has-event--gold:not(.is-selected)::after {
+.page-booking .cal-cell.has-event--gold:not(.is-selected)::after,
+.page-schedule .cal-cell.has-event--gold:not(.is-selected)::after {
   content: "";
   position: absolute;
   top: 6px;
@@ -1234,16 +1240,20 @@ svg { width: 100%; height: 100%; }
   background: var(--gold);
   box-shadow: 0 0 0 3px rgba(232,192,121,0.26);
 }
-.page-booking .cal-cell.has-event .dot {
+.page-booking .cal-cell.has-event .dot,
+.page-schedule .cal-cell.has-event .dot {
   bottom: 5px;
   width: 14px;
   height: 4px;
   border-radius: 999px;
   opacity: 0.95;
 }
-.page-booking .cal-cell.has-event--gold .dot { background: var(--gold); }
-.page-booking .cal-cell.has-event--green .dot { background: var(--primary); }
-.page-booking .cal-cell.is-selected.has-event--gold {
+.page-booking .cal-cell.has-event--gold .dot,
+.page-schedule .cal-cell.has-event--gold .dot { background: var(--gold); }
+.page-booking .cal-cell.has-event--green .dot,
+.page-schedule .cal-cell.has-event--green .dot { background: var(--primary); }
+.page-booking .cal-cell.is-selected.has-event--gold,
+.page-schedule .cal-cell.is-selected.has-event--gold {
   box-shadow: 0 6px 16px rgba(45,95,63,0.3), inset 0 0 0 2px var(--gold-soft);
 }
 .booking-calendar-legend {

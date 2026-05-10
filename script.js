@@ -357,14 +357,21 @@
       <div class="calfull-grid">
         ${cells.map((c) => {
           const ev = eventsByDate[c.date];
+          const status = ev === 'gold' || ev === 'green' ? ev : '';
           const isSel = c.date === _selectedDate;
           const cls = ['cal-cell'];
           if (c.other) cls.push('is-other');
           if (isSel)   cls.push('is-selected');
+          if (status)  cls.push('has-event', `has-event--${status}`);
+          const eventTitle = status === 'gold'
+            ? 'Есть групповой урок на этот день'
+            : status === 'green'
+              ? 'Есть урок на этот день'
+              : '';
           return `
-            <button class="${cls.join(' ')}" data-date="${c.date}">
+            <button class="${cls.join(' ')}" data-date="${c.date}" ${eventTitle ? `title="${eventTitle}" aria-label="${c.day}. ${eventTitle}"` : ''}>
               <span class="d">${c.day}</span>
-              ${ev ? `<span class="dot dot--${ev}"></span>` : ''}
+              ${status ? `<span class="dot dot--${status}"></span>` : ''}
               ${isSel ? `<span class="cell-spark">${icon('sparkle')}</span>` : ''}
             </button>
           `;
