@@ -40,6 +40,10 @@
           <input class="auth-input" id="password" name="password" type="password"
                  autocomplete="new-password" required minlength="6" />
         </div>
+        <label class="auth-consent">
+          <input type="checkbox" name="privacyAccepted" required />
+          <span>Я согласен с <a href="privacy.html" target="_blank" rel="noopener">Политикой конфиденциальности</a> и обработкой персональных данных для работы платформы.</span>
+        </label>
         <p class="auth-error" id="authError"></p>
         <button type="submit" class="btn btn--primary auth-submit" id="authSubmit">
           Зарегистрироваться

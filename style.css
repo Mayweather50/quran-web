@@ -1895,6 +1895,164 @@ svg { width: 100%; height: 100%; }
 }
 
 /* =========================================================
+   LEGAL / PRIVACY
+========================================================= */
+.page-privacy {
+  background:
+    radial-gradient(circle at 12% 0, rgba(196, 154, 79, 0.16), transparent 30%),
+    linear-gradient(180deg, #FBF7EE 0%, #F7EFE2 100%);
+}
+.legal-hero {
+  position: relative;
+  min-height: 280px;
+  overflow: hidden;
+  background: #F9F1E5;
+}
+.legal-hero__bg {
+  position: absolute;
+  inset: 0;
+  background: url('assets/images/schedule-bg.png') center right / cover no-repeat;
+  opacity: 0.22;
+}
+.legal-hero__fade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(251, 247, 238, 0.98) 0%, rgba(251, 247, 238, 0.82) 48%, rgba(251, 247, 238, 0.28) 100%),
+    linear-gradient(180deg, transparent 55%, #FBF7EE 100%);
+}
+.legal-hero__inner {
+  position: relative;
+  z-index: 1;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 760px;
+}
+.legal-eyebrow {
+  margin: 0 0 12px;
+  color: var(--gold-dark);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+.legal-hero h1 {
+  margin: 0;
+  font-family: 'Lora', serif;
+  font-size: clamp(38px, 5vw, 68px);
+  line-height: 1.02;
+  color: var(--primary-dark);
+}
+.legal-hero p:not(.legal-eyebrow) {
+  max-width: 620px;
+  margin: 16px 0 0;
+  color: var(--text-muted);
+  font-size: 17px;
+  line-height: 1.7;
+}
+.legal-layout {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.34fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.legal-summary,
+.legal-card {
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(45, 95, 63, 0.12);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.legal-summary {
+  position: sticky;
+  top: 96px;
+  padding: 24px;
+}
+.legal-summary__icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--primary);
+  background: linear-gradient(135deg, #E8EFE9, #F8EED9);
+  margin-bottom: 18px;
+}
+.legal-summary__icon svg {
+  width: 28px;
+  height: 28px;
+}
+.legal-summary h2,
+.legal-card h2 {
+  font-family: 'Lora', serif;
+  color: var(--primary-dark);
+  line-height: 1.18;
+}
+.legal-summary h2 {
+  font-size: 25px;
+  margin: 0 0 10px;
+}
+.legal-summary p {
+  margin: 0 0 22px;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+.legal-summary dl {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+.legal-summary dt {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+.legal-summary dd {
+  margin: 3px 0 0;
+  color: var(--text);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.legal-summary a,
+.legal-card a {
+  color: var(--primary);
+  font-weight: 700;
+}
+.legal-card {
+  padding: 12px 30px;
+}
+.legal-card section {
+  padding: 24px 0;
+  border-bottom: 1px solid rgba(45, 95, 63, 0.09);
+}
+.legal-card section:last-child {
+  border-bottom: 0;
+}
+.legal-card h2 {
+  font-size: 25px;
+  margin: 0 0 12px;
+}
+.legal-card p,
+.legal-card li {
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.75;
+}
+.legal-card p {
+  margin: 0 0 12px;
+}
+.legal-card p:last-child {
+  margin-bottom: 0;
+}
+.legal-card ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+/* =========================================================
    FOOTER
 ========================================================= */
 .site-footer {
@@ -2005,6 +2163,30 @@ svg { width: 100%; height: 100%; }
     grid-column: 1 / -1;
     justify-self: start;
     min-height: 40px;
+  }
+  .legal-hero,
+  .legal-hero__inner {
+    min-height: 240px;
+  }
+  .legal-hero h1 {
+    font-size: 40px;
+  }
+  .legal-hero p:not(.legal-eyebrow) {
+    font-size: 15px;
+  }
+  .legal-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .legal-summary {
+    position: static;
+    padding: 20px;
+  }
+  .legal-card {
+    padding: 4px 20px;
+  }
+  .legal-card h2 {
+    font-size: 21px;
   }
 }
 
@@ -2558,6 +2740,37 @@ svg { width: 100%; height: 100%; }
 }
 .auth-foot a { color: var(--primary); font-weight: 600; }
 .auth-foot a:hover { text-decoration: underline; }
+.auth-consent {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.auth-consent input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--primary);
+}
+.auth-consent a,
+.auth-legal a {
+  color: var(--primary);
+  font-weight: 700;
+}
+.auth-consent a:hover,
+.auth-legal a:hover {
+  text-decoration: underline;
+}
+.auth-legal {
+  margin: 10px 0 0;
+  color: var(--text-soft);
+  font-size: 12.5px;
+  line-height: 1.55;
+  text-align: center;
+}
 
 /* =========================================================
    TEACHER DASHBOARD — minimal, reuses palette and existing

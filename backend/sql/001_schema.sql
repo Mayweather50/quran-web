@@ -29,10 +29,24 @@ CREATE TABLE IF NOT EXISTS users (
   age_text      TEXT,
   level_name    TEXT REFERENCES levels(name) ON UPDATE CASCADE ON DELETE SET NULL,
   password_hash TEXT,
+  privacy_accepted_at      TIMESTAMPTZ,
+  privacy_version          TEXT,
+  personal_data_consent_at TIMESTAMPTZ,
   is_active     BOOLEAN NOT NULL DEFAULT TRUE,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+
+CREATE TABLE IF NOT EXISTS user_consents (
+  id            TEXT PRIMARY KEY,
+  user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  consent_type  TEXT NOT NULL,
+  policy_version TEXT NOT NULL,
+  accepted_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ip_address    TEXT,
+  user_agent    TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_user_consents_user ON user_consents(user_id);
 
 -- ---------- TEACHERS -----------------------------------------
 CREATE TABLE IF NOT EXISTS teachers (

@@ -2250,13 +2250,17 @@
       const name     = (fd.get('name')     || '').toString().trim();
       const email    = (fd.get('email')    || '').toString().trim();
       const password = (fd.get('password') || '').toString();
+      const privacyAccepted = fd.get('privacyAccepted') === 'on';
       if (!name || !email || !password) {
         throw new Error('Заполните все поля');
       }
       if (password.length < 6) {
         throw new Error('Пароль должен быть не меньше 6 символов');
       }
-      const res = await API.post('/auth/register', { name, email, password });
+      if (!privacyAccepted) {
+        throw new Error('Подтвердите согласие с политикой конфиденциальности');
+      }
+      const res = await API.post('/auth/register', { name, email, password, privacyAccepted });
       API.setToken(res.token);
       API.setUser(res.user);
       window.location.replace('index.html');
@@ -2837,6 +2841,7 @@
       me.role === 'teacher' ? profileMenuRow('quran', 'Кабинет преподавателя', 'teacher.html') : '',
       me.role === 'admin' ? profileMenuRow('sliders', 'Админ-панель', 'admin.html') : '',
       profileMenuRow('bell', 'Безопасность', '#profile-security'),
+      profileMenuRow('info', 'Политика конфиденциальности', 'privacy.html'),
     ].filter(Boolean).join('');
 
     return `

@@ -16,6 +16,7 @@ const {
 
 // Simple email format check (good enough for the UI; DB has the unique index).
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PRIVACY_VERSION = 'privacy-2026-05-10';
 
 // ---------------- POST /api/auth/register ----------------
 // Body: { name, email, password }
@@ -26,10 +27,14 @@ router.post('/register', async (req, res, next) => {
     const name = String(req.body?.name || '').trim();
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
+    const privacyAccepted = req.body?.privacyAccepted === true ||
+      req.body?.privacyAccepted === 'true' ||
+      req.body?.privacyAccepted === 'on';
 
     if (name.length < 2)        return res.status(400).json({ error: 'name must be at least 2 chars' });
     if (!EMAIL_RE.test(email))  return res.status(400).json({ error: 'invalid email' });
     if (password.length < 6)    return res.status(400).json({ error: 'password must be at least 6 chars' });
+    if (!privacyAccepted)       return res.status(400).json({ error: 'privacy policy consent required' });
 
     // Email collision?
     const dup = await query('SELECT 1 FROM users WHERE email = $1', [email]);
@@ -41,14 +46,26 @@ router.post('/register', async (req, res, next) => {
     const password_hash = await hashPassword(password);
 
     const ins = await query(
-      `INSERT INTO users (id, role, name, email, password_hash, is_active)
-       VALUES ($1, 'student', $2, $3, $4, TRUE)
+      `INSERT INTO users (
+         id, role, name, email, password_hash,
+         privacy_accepted_at, privacy_version, personal_data_consent_at,
+         is_active
+       )
+       VALUES ($1, 'student', $2, $3, $4, now(), $5, now(), TRUE)
        RETURNING id, role, name, email, phone, avatar_url, age_text, level_name,
                  is_active, created_at`,
-      [id, name, email, password_hash]
+      [id, name, email, password_hash, PRIVACY_VERSION]
     );
 
     const user = ins.rows[0];
+
+    await query(
+      `INSERT INTO user_consents (id, user_id, consent_type, policy_version, ip_address, user_agent)
+       VALUES
+         ($1, $3, 'privacy_policy', $4, $5, $6),
+         ($2, $3, 'personal_data_processing', $4, $5, $6)`,
+      [genId(), genId(), id, PRIVACY_VERSION, req.ip || null, req.get('user-agent') || null]
+    );
 
     // Bootstrap student_progress so /me/progress doesn't 404 on first call.
     await query(
