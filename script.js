@@ -1090,7 +1090,6 @@
         <p class="teacher-subtitle">${subtitle}</p>
         <div class="teacher-formats">
           <span class="format-pill format-pill--green">${icon('monitor')} Онлайн</span>
-          <span class="format-pill format-pill--gold">${icon('pin')} Офлайн</span>
         </div>
       </div>
     `;
@@ -1690,7 +1689,7 @@
       }
       return { formatIcon: 'video', format: 'Онлайн', location: provider, url };
     }
-    return { formatIcon: 'pin', format: 'Офлайн', location: '—', url: null };
+    return { formatIcon: 'video', format: 'Онлайн', location: 'ссылка ожидается', url: null };
   }
 
   let _activeFilter = 'all';
@@ -3375,7 +3374,7 @@
                 ? `<p class="empty-state">На сегодня нет уроков</p>`
                 : today.map((l) => {
                     const time = String(l.time_slot || '').slice(0, 5);
-                    const provider = l.meeting_url ? 'Онлайн' : 'Офлайн';
+                    const provider = 'Онлайн';
                     const studentLabel = l.is_public
                       ? `<strong>Группа</strong>`
                       : `Ученик: <strong>${escapeHTML(l.student_name || '—')}</strong>`;
