@@ -2334,18 +2334,9 @@ svg { width: 100%; height: 100%; }
   .booking-note { font-size: 11px; }
 
   /* === HOME PAGE — MOBILE COMPACT (everything fits on one screen) === */
-  /* Show header transparent over hero */
+  /* Home already has bottom tabs on compact screens; keep the hero image clean. */
   .page-home .site-header {
-    background: transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    border-bottom: 0;
-    box-shadow: none;
-  }
-  .page-home .site-header.scrolled {
-    background: rgba(242, 235, 224, 0.92);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    display: none;
   }
   .page-home .header-inner {
     height: 56px;
@@ -2363,8 +2354,8 @@ svg { width: 100%; height: 100%; }
   /* Compact hero — keep ~180px so mosque is visible */
   .page-home .hero-full {
     min-height: 200px;
-    padding-top: 56px;
-    margin-top: -56px;
+    padding-top: 0;
+    margin-top: 0;
   }
   .page-home .hero-full__inner {
     padding-top: 12px;
