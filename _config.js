@@ -1,2 +1,1 @@
-/* This file is replaced at deploy time by netlify.toml's build step.
-   In local dev it's empty, so api.js falls back to localhost:3001/api. */
+window.__API_BASE__ = 'https://quran-backend-tjui.onrender.com/api';
