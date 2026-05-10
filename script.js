@@ -793,6 +793,9 @@
         drawBookingCalendarShell(slot);
         renderBookingStats();
         await renderBookingSlots();
+        renderBookingStats();
+        await renderBookingTeacher();
+        syncBookingCtaState();
       });
     });
 
@@ -812,6 +815,9 @@
         await renderBookingCalendar();
         renderBookingStats();
         await renderBookingSlots();
+        renderBookingStats();
+        await renderBookingTeacher();
+        syncBookingCtaState();
       });
     });
   }
@@ -820,8 +826,9 @@
     const slot = $('[data-render="booking-stats"]');
     if (!slot || !DB.booking) return;
     const daySlots = _bookingDaySlots || [];
-    const slotsCount = daySlots.filter((s) => s.available).length;
-    const dur = daySlots.find((s) => s.available)?.duration_minutes
+    const bookableSlots = getBookableBookingSlots();
+    const slotsCount = bookableSlots.length;
+    const dur = bookableSlots[0]?.duration_minutes
       || daySlots[0]?.duration_minutes
       || '—';
     const labels = DB.booking.stats || {};
@@ -853,6 +860,41 @@
     return _bookedSlots.has(bookedKey(tId, dateIso, s.time));
   }
 
+  function getBookableBookingSlots() {
+    return (_bookingDaySlots || []).filter((s) => s.available && !isSlotBooked(s));
+  }
+
+  function getSelectedBookingSlot() {
+    const slots = _bookingDaySlots || [];
+    const selected = slots[_selectedSlotIndex];
+    if (selected && selected.available && !isSlotBooked(selected)) return selected;
+    return getBookableBookingSlots()[0] || null;
+  }
+
+  function syncBookingCtaState() {
+    const cta = $('.booking-cta');
+    if (!cta) return;
+
+    const note = $('[data-render="cta-note"]');
+    const user = API.getUser();
+    const hasBookableSlot = !!getSelectedBookingSlot();
+
+    if (API.getToken() && user && user.role !== 'student') {
+      cta.disabled = true;
+      if (note) note.textContent = 'Только ученики могут записываться на уроки';
+      return;
+    }
+
+    if (!hasBookableSlot) {
+      cta.disabled = true;
+      if (note) note.textContent = 'Выберите дату со свободным временем';
+      return;
+    }
+
+    cta.disabled = false;
+    if (note && DB.booking?.cta?.note) note.textContent = DB.booking.cta.note;
+  }
+
   async function renderBookingSlots() {
     const slot = $('[data-render="booking-slots"]');
     if (!slot) return;
@@ -876,7 +918,7 @@
       ? _bookingDaySlots
       : [];
 
-    if (!slots.length) {
+    if (!slots.length || !slots.some((s) => s.available && !isSlotBooked(s))) {
       slot.innerHTML = `<p class="empty-state">На этот день нет свободных слотов</p>`;
       _selectedSlotIndex = null;
       return;
@@ -919,6 +961,7 @@
       btn.addEventListener('click', () => {
         _selectedSlotIndex = parseInt(btn.dataset.slot, 10);
         renderBookingSlots();
+        syncBookingCtaState();
       });
     });
   }
@@ -926,6 +969,11 @@
   async function renderBookingTeacher() {
     const slot = $('[data-render="booking-teacher"]');
     if (!slot || !DB.booking) return;
+
+    if (Array.isArray(_bookingDaySlots) && !getBookableBookingSlots().length) {
+      slot.innerHTML = `<p class="empty-state">На выбранную дату у преподавателя нет доступного времени</p>`;
+      return;
+    }
 
     let teachers;
     try {
@@ -1078,6 +1126,8 @@
     await renderBookingTeacher();
     await renderBookingCalendar();
     await renderBookingSlots();
+    renderBookingStats();
+    await renderBookingTeacher();
 
     const cta = $('.booking-cta');
     const ctaLabelEl = cta ? $('[data-render="cta-label"]', cta) : null;
@@ -1086,17 +1136,7 @@
     // Visually disable the CTA + change the note for non-student users.
     // Anonymous users keep the normal-looking button (click handler shows
     // "Войдите, чтобы записаться на урок" alert).
-    (function applyAuthGateToCta() {
-      const note = $('[data-render="cta-note"]');
-      const user = API.getUser();
-      if (API.getToken() && user && user.role !== 'student') {
-        if (cta) cta.disabled = true;
-        if (note) note.textContent = 'Только ученики могут записываться на уроки';
-      } else {
-        if (cta) cta.disabled = false;
-        if (note && DB.booking?.cta?.note) note.textContent = DB.booking.cta.note;
-      }
-    })();
+    syncBookingCtaState();
 
     cta?.addEventListener('click', async () => {
       if (cta.disabled) return;
@@ -1113,9 +1153,7 @@
       }
 
       const t = _bookingTeacher;
-      const activeSlots = (_bookingDaySlots && _bookingDaySlots.length)
-        ? _bookingDaySlots
-        : (DB.booking?.slots || []);
+      const activeSlots = _bookingDaySlots || [];
       const slotData = activeSlots[_selectedSlotIndex];
       const day = _selectedDay;
 
@@ -1161,6 +1199,8 @@
         _selectedSlotIndex = null;
         renderBookingSlots();
         renderBookingStats();
+        await renderBookingTeacher();
+        syncBookingCtaState();
 
         showBookingSuccessModal({
           ageGroup: groupMeta?.label || getBookingAgeName() || ageKey || 'Запись',
@@ -1180,15 +1220,18 @@
           _bookedSlots.add(bookedKey(t.id, lessonDate, slotData.time));
           _selectedSlotIndex = null;
           renderBookingSlots();
-          alert('Этот слот уже занят. Выберите другое время.');
+          renderBookingStats();
+          await renderBookingTeacher();
+          syncBookingCtaState();
+          alert('Вы уже записаны на урок в это время.');
         } else if (err.status === 400) {
           alert(`Ошибка данных: ${err.message}`);
         } else {
           alert(`Не удалось записаться: ${err.message}`);
         }
       } finally {
-        cta.disabled = false;
         if (ctaLabelEl) ctaLabelEl.textContent = ctaBaseLabel;
+        syncBookingCtaState();
       }
     });
   }
