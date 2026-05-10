@@ -2074,7 +2074,7 @@
         const a = e.target.closest('a[href]');
         if (!a) return;
         const href = a.getAttribute('href');
-        if (!href || href === '#' || /^(https?:|\/\/)/.test(href)) return;
+        if (!href || href === '#' || href.startsWith('#') || /^(https?:|\/\/)/.test(href)) return;
         e.preventDefault();
         navigateTo(href);
       });
@@ -2685,8 +2685,12 @@
   }
 
   function renderProfileBookingsCard(bookings, loadError) {
+    const today = todayIsoLocal();
     const list = (bookings || [])
-      .filter((b) => ['pending', 'confirmed'].includes(b.status))
+      .filter((b) => (
+        ['pending', 'confirmed'].includes(b.status) &&
+        bookingDateOf(b) >= today
+      ))
       .sort((a, b) => {
         const ad = `${bookingDateOf(a)} ${bookingTimeOf(a)}`;
         const bd = `${bookingDateOf(b)} ${bookingTimeOf(b)}`;
@@ -2697,13 +2701,13 @@
     let body;
     if (loadError) {
       body = `
-        <div class="profile-bookings-empty">
+        <div class="profile-empty-soft">
           <strong>Не удалось загрузить записи</strong>
           <span>Обновите страницу или откройте расписание.</span>
         </div>`;
     } else if (!list.length) {
       body = `
-        <div class="profile-bookings-empty">
+        <div class="profile-empty-soft">
           <strong>Активных записей пока нет</strong>
           <span>Когда вы запишетесь на урок, дата и время появятся здесь.</span>
           <a class="btn btn--primary" href="booking.html">Записаться</a>
@@ -2742,13 +2746,265 @@
     }
 
     return `
-      <section class="panel-card profile-bookings-card">
-        <div class="panel-card-head">
+      <section class="profile-section-card profile-bookings-card" id="profile-bookings">
+        <div class="profile-section-head">
           <h2>Мои записи</h2>
           <a href="schedule.html">Расписание</a>
         </div>
         ${body}
       </section>`;
+  }
+
+  function profileBookingsActive(bookings) {
+    const today = todayIsoLocal();
+    return (bookings || []).filter((b) => (
+      ['pending', 'confirmed'].includes(b.status) &&
+      bookingDateOf(b) >= today
+    ));
+  }
+
+  function profileProgressMeta(progress, bookings) {
+    const completedFromProgress = Number(progress?.lessons_completed);
+    const completedFromBookings = (bookings || []).filter((b) => b.status === 'completed').length;
+    const completed = Number.isFinite(completedFromProgress) && completedFromProgress > 0
+      ? completedFromProgress
+      : completedFromBookings;
+    const total = Number(progress?.lessons_total) || 30;
+    const percent = Math.max(0, Math.min(100, Math.round((completed * 100) / total)));
+    const levelName = progress?.level_name || 'Начальный уровень';
+    const levelIndex = Math.max(1, Math.min(10, Math.ceil(percent / 10) || 1));
+    return { completed, total, percent, levelName, levelIndex };
+  }
+
+  function profileMetric(iconName, value, label) {
+    return `
+      <div class="profile-stat">
+        <span class="profile-stat__icon">${icon(iconName)}</span>
+        <strong>${escapeHTML(String(value))}</strong>
+        <span>${escapeHTML(label)}</span>
+      </div>`;
+  }
+
+  function profileMenuRow(iconName, label, href) {
+    return `
+      <a class="profile-menu-row" href="${escapeAttr(href)}">
+        <span class="profile-menu-icon">${icon(iconName)}</span>
+        <span>${escapeHTML(label)}</span>
+        <i aria-hidden="true">${icon('chevron')}</i>
+      </a>`;
+  }
+
+  function renderProfileScreen({ me, bookings, bookingsError, progress }) {
+    const roleLabel = ({ student: 'Ученик', teacher: 'Преподаватель', admin: 'Администратор' })[me.role] || me.role;
+    const initial = (me.name || '?').trim().charAt(0).toUpperCase();
+    const avatarBlock = me.avatar_url
+      ? `<img src="${escapeAttr(me.avatar_url)}" alt="" />`
+      : `<span class="profile-photo__initial">${escapeHTML(initial)}</span>`;
+    const activeBookings = profileBookingsActive(bookings);
+    const progressMeta = profileProgressMeta(progress, bookings);
+    const subtitle = me.role === 'student'
+      ? 'Стремлюсь к знанию и довольству Аллаха'
+      : 'Управление профилем и учебным процессом';
+    const menuRows = [
+      profileMenuRow('person', 'Личные данные', '#profile-data'),
+      me.role === 'student' ? profileMenuRow('calIcon', 'Мои записи', '#profile-bookings') : '',
+      profileMenuRow('clock', 'Расписание', 'schedule.html'),
+      me.role === 'teacher' ? profileMenuRow('quran', 'Кабинет преподавателя', 'teacher.html') : '',
+      me.role === 'admin' ? profileMenuRow('sliders', 'Админ-панель', 'admin.html') : '',
+      profileMenuRow('bell', 'Безопасность', '#profile-security'),
+    ].filter(Boolean).join('');
+
+    return `
+      <div class="profile-shell">
+        <section class="profile-hero">
+          <div>
+            <h1>Профиль</h1>
+            <p>Ваш путь к знаниям и близости к Аллаху</p>
+          </div>
+          <a class="profile-bell-btn" href="schedule.html" aria-label="Открыть расписание">${icon('bell')}</a>
+        </section>
+
+        <section class="profile-main-card">
+          <div class="profile-main-user">
+            <div class="profile-avatar-xl" id="profilePhotoView">${avatarBlock}</div>
+            <div class="profile-main-copy">
+              <h2 id="profileHeroName">${escapeHTML(me.name || 'Пользователь')}</h2>
+              <p>${escapeHTML(subtitle)}</p>
+              <span class="profile-role-pill">${icon('flower')}${escapeHTML(roleLabel)}</span>
+            </div>
+            <div class="profile-avatar-actions">
+              <label class="profile-edit-btn" for="profilePhotoInput" title="Загрузить фото" aria-label="Загрузить фото">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3Z M13.5 8.5l3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </label>
+              <input type="file" id="profilePhotoInput" accept="image/*" hidden />
+              ${me.avatar_url ? `<button class="profile-remove-photo" id="profilePhotoRemove" type="button">Убрать фото</button>` : ''}
+              <p class="panel-msg" id="photoMsg"></p>
+            </div>
+          </div>
+          <div class="profile-stats">
+            ${profileMetric('quran', progressMeta.completed, 'уроков завершено')}
+            ${profileMetric('calIcon', activeBookings.length, 'активных записей')}
+            ${profileMetric('route', `${progressMeta.percent}%`, 'общий прогресс')}
+          </div>
+        </section>
+
+        ${me.role === 'student' ? `
+          <section class="profile-progress-card">
+            <div class="profile-section-head">
+              <h2>Мой прогресс</h2>
+              <a href="schedule.html">Смотреть все</a>
+            </div>
+            <div class="profile-progress-grid">
+              <div class="profile-progress-tile">
+                <span class="profile-progress-icon is-green">${icon('quran')}</span>
+                <div>
+                  <span>Завершено уроков</span>
+                  <strong>${progressMeta.completed} <small>из ${progressMeta.total}</small></strong>
+                </div>
+              </div>
+              <div class="profile-progress-tile">
+                <span class="profile-progress-icon is-gold">${icon('starOutline')}</span>
+                <div>
+                  <span>${escapeHTML(progressMeta.levelName)}</span>
+                  <strong>${progressMeta.levelIndex} <small>из 10</small></strong>
+                  <i class="profile-progress-line"><em style="--p:${progressMeta.percent}%"></em></i>
+                </div>
+              </div>
+            </div>
+          </section>
+        ` : ''}
+
+        <section class="profile-menu-card">
+          ${menuRows}
+        </section>
+
+        <section class="profile-section-card" id="profile-data">
+          <div class="profile-section-head">
+            <h2>Личные данные</h2>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">Имя</span>
+            <input class="panel-input" id="profileName" value="${escapeAttr(me.name || '')}" />
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">Email</span>
+            <span class="panel-value">${escapeHTML(me.email || '—')}</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">Роль</span>
+            <span class="panel-value">${escapeHTML(roleLabel)}</span>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn--primary" id="saveNameBtn">Сохранить</button>
+          </div>
+          <p class="panel-msg" id="nameMsg"></p>
+        </section>
+
+        ${me.role === 'student' ? renderProfileBookingsCard(bookings, bookingsError) : ''}
+
+        <section class="profile-section-card" id="profile-security">
+          <div class="profile-section-head">
+            <h2>Безопасность</h2>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">Текущий пароль</span>
+            <input class="panel-input" id="currentPwd" type="password" autocomplete="current-password" />
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">Новый пароль</span>
+            <input class="panel-input" id="newPwd" type="password" autocomplete="new-password" minlength="6" />
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">Повтор</span>
+            <input class="panel-input" id="newPwd2" type="password" autocomplete="new-password" minlength="6" />
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn--primary" id="savePwdBtn">Сменить пароль</button>
+          </div>
+          <p class="panel-msg" id="pwdMsg"></p>
+        </section>
+
+        <section class="profile-section-card profile-account-card">
+          <div class="profile-section-head">
+            <h2>Аккаунт</h2>
+          </div>
+          <div class="panel-link-row">
+            ${me.role === 'teacher' ? `<a href="teacher.html">Кабинет преподавателя</a>` : ''}
+            ${me.role === 'admin' ? `<a href="admin.html">Открыть админ-панель</a>` : ''}
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn--primary profile-logout-btn" id="logoutBtn">Выйти из аккаунта</button>
+          </div>
+        </section>
+      </div>`;
+  }
+
+  function bindProfileScreen(me) {
+    $('#saveNameBtn')?.addEventListener('click', async () => {
+      const name = $('#profileName')?.value.trim() || '';
+      if (name.length < 2) { panelMsg('nameMsg', 'error', 'Имя должно быть не меньше 2 символов'); return; }
+      try {
+        const updated = await API.patch('/auth/me', { name });
+        API.setUser(updated);
+        const heroName = $('#profileHeroName');
+        if (heroName) heroName.textContent = updated.name || name;
+        panelMsg('nameMsg', 'success', 'Сохранено');
+      } catch (err) { panelMsg('nameMsg', 'error', err.message); }
+    });
+
+    $('#savePwdBtn')?.addEventListener('click', async () => {
+      const current = $('#currentPwd')?.value || '';
+      const next1 = $('#newPwd')?.value || '';
+      const next2 = $('#newPwd2')?.value || '';
+      if (!current || !next1) { panelMsg('pwdMsg', 'error', 'Заполните все поля'); return; }
+      if (next1.length < 6)   { panelMsg('pwdMsg', 'error', 'Пароль должен быть не меньше 6 символов'); return; }
+      if (next1 !== next2)    { panelMsg('pwdMsg', 'error', 'Новые пароли не совпадают'); return; }
+      try {
+        await API.post('/auth/change-password', { currentPassword: current, newPassword: next1 });
+        $('#currentPwd').value = ''; $('#newPwd').value = ''; $('#newPwd2').value = '';
+        panelMsg('pwdMsg', 'success', 'Пароль обновлён');
+      } catch (err) { panelMsg('pwdMsg', 'error', err.message); }
+    });
+
+    $('#profilePhotoInput')?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!/^image\//.test(file.type)) {
+        panelMsg('photoMsg', 'error', 'Файл должен быть изображением');
+        return;
+      }
+      panelMsg('photoMsg', 'success', 'Подготовка фото…');
+      try {
+        const dataUrl = await resizeImageToDataUrl(file, 512, 0.85);
+        const res = await API.patch('/users/me/avatar', { avatar_url: dataUrl });
+        const view = $('#profilePhotoView');
+        if (view) view.innerHTML = `<img src="${escapeAttr(res.avatar_url || dataUrl)}" alt="" />`;
+        const cur = API.getUser() || me || {};
+        API.setUser({ ...cur, avatar_url: res.avatar_url || dataUrl });
+        panelMsg('photoMsg', 'success', 'Фото обновлено');
+        if (!$('#profilePhotoRemove')) initProfile();
+      } catch (err) {
+        panelMsg('photoMsg', 'error', err.message || 'Не удалось загрузить фото');
+      } finally {
+        e.target.value = '';
+      }
+    });
+
+    $('#profilePhotoRemove')?.addEventListener('click', async () => {
+      if (!confirm('Убрать фото профиля?')) return;
+      try {
+        await API.patch('/users/me/avatar', { avatar_url: null });
+        const cur = API.getUser() || me || {};
+        API.setUser({ ...cur, avatar_url: null });
+        initProfile();
+      } catch (err) {
+        panelMsg('photoMsg', 'error', err.message);
+      }
+    });
+
+    $('#logoutBtn')?.addEventListener('click', () => {
+      if (confirm('Выйти из аккаунта?')) logout();
+    });
   }
 
   async function initProfile() {
@@ -2773,7 +3029,7 @@
     let myBookingsError = null;
     if (me.role === 'student') {
       try {
-        const rows = await API.get(`/bookings?scope=mine&from=${todayIsoLocal()}`);
+        const rows = await API.get('/bookings?scope=mine');
         myBookings = Array.isArray(rows) ? rows : [];
       } catch (err) {
         myBookingsError = err;
@@ -2781,284 +3037,22 @@
       }
     }
 
-    const roleLabel = ({ student: 'Ученик', teacher: 'Преподаватель', admin: 'Администратор' })[me.role] || me.role;
-    const initial = (me.name || '?').trim().charAt(0).toUpperCase();
-    const avatarBlock = me.avatar_url
-      ? `<img src="${escapeAttr(me.avatar_url)}" alt="" />`
-      : `<span class="profile-photo__initial">${initial}</span>`;
-
-    root.innerHTML = `
-      <section class="panel-card profile-photo-card">
-        <h2>Фото профиля</h2>
-        <div class="profile-photo">
-          <div class="profile-photo__circle" id="profilePhotoView">${avatarBlock}</div>
-          <div class="profile-photo__actions">
-            <label class="btn btn--primary" for="profilePhotoInput">Загрузить фото</label>
-            <input type="file" id="profilePhotoInput" accept="image/*" hidden />
-            ${me.avatar_url ? `<button class="btn" id="profilePhotoRemove">Убрать</button>` : ''}
-            <p class="panel-msg" id="photoMsg"></p>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel-card">
-        <h2>Мои данные</h2>
-        <div class="panel-row">
-          <span class="panel-label">Имя</span>
-          <input class="panel-input" id="profileName" value="${(me.name || '').replace(/"/g, '&quot;')}" />
-        </div>
-        <div class="panel-row">
-          <span class="panel-label">Email</span>
-          <span class="panel-value">${me.email || '—'}</span>
-        </div>
-        <div class="panel-row">
-          <span class="panel-label">Роль</span>
-          <span class="panel-value">${roleLabel}</span>
-        </div>
-        <div class="panel-actions">
-          <button class="btn btn--primary" id="saveNameBtn">Сохранить</button>
-        </div>
-        <p class="panel-msg" id="nameMsg"></p>
-      </section>
-
-      ${me.role === 'student' ? renderProfileBookingsCard(myBookings, myBookingsError) : ''}
-
-      <section class="panel-card">
-        <h2>Сменить пароль</h2>
-        <div class="panel-row">
-          <span class="panel-label">Текущий пароль</span>
-          <input class="panel-input" id="currentPwd" type="password" autocomplete="current-password" />
-        </div>
-        <div class="panel-row">
-          <span class="panel-label">Новый пароль</span>
-          <input class="panel-input" id="newPwd" type="password" autocomplete="new-password" minlength="6" />
-        </div>
-        <div class="panel-row">
-          <span class="panel-label">Повтор</span>
-          <input class="panel-input" id="newPwd2" type="password" autocomplete="new-password" minlength="6" />
-        </div>
-        <div class="panel-actions">
-          <button class="btn btn--primary" id="savePwdBtn">Сменить пароль</button>
-        </div>
-        <p class="panel-msg" id="pwdMsg"></p>
-      </section>
-
-      <section class="panel-card">
-        <h2>Аккаунт</h2>
-        <div class="panel-link-row">
-          ${me.role === 'teacher' ? `<a href="teacher.html">Кабинет преподавателя →</a>` : ''}
-          ${me.role === 'admin'   ? `<a href="admin.html">Открыть админ-панель →</a>` : ''}
-        </div>
-        <div class="panel-actions" style="margin-top:14px">
-          <button class="btn btn--primary" id="logoutBtn"
-                  style="background:#c25d7a">Выйти из аккаунта</button>
-        </div>
-      </section>
-    `;
-
-    $('#saveNameBtn').addEventListener('click', async () => {
-      const name = $('#profileName').value.trim();
-      if (name.length < 2) { panelMsg('nameMsg', 'error', 'Имя должно быть не меньше 2 символов'); return; }
+    let myProgress = null;
+    if (me.role === 'student') {
       try {
-        const updated = await API.patch('/auth/me', { name });
-        API.setUser(updated);
-        panelMsg('nameMsg', 'success', 'Сохранено');
-      } catch (err) { panelMsg('nameMsg', 'error', err.message); }
-    });
-
-    $('#savePwdBtn').addEventListener('click', async () => {
-      const current = $('#currentPwd').value;
-      const next1 = $('#newPwd').value;
-      const next2 = $('#newPwd2').value;
-      if (!current || !next1) { panelMsg('pwdMsg', 'error', 'Заполните все поля'); return; }
-      if (next1.length < 6)   { panelMsg('pwdMsg', 'error', 'Пароль должен быть не меньше 6 символов'); return; }
-      if (next1 !== next2)    { panelMsg('pwdMsg', 'error', 'Новые пароли не совпадают'); return; }
-      try {
-        await API.post('/auth/change-password', { currentPassword: current, newPassword: next1 });
-        $('#currentPwd').value = ''; $('#newPwd').value = ''; $('#newPwd2').value = '';
-        panelMsg('pwdMsg', 'success', 'Пароль обновлён');
-      } catch (err) { panelMsg('pwdMsg', 'error', err.message); }
-    });
-
-    // ── Photo upload ─────────────────────────────────────────
-    $('#profilePhotoInput')?.addEventListener('change', async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      if (!file.type.startsWith('image/')) {
-        panelMsg('photoMsg', 'error', 'Это не изображение');
-        return;
-      }
-      if (file.size > 8 * 1024 * 1024) {
-        panelMsg('photoMsg', 'error', 'Файл слишком большой (макс. 8 МБ)');
-        return;
-      }
-      panelMsg('photoMsg', 'success', 'Обработка…');
-      try {
-        const dataUrl = await resizeImageToDataUrl(file, 320, 0.85);
-        const res = await API.patch('/users/me/avatar', { avatar_url: dataUrl });
-        const view = $('#profilePhotoView');
-        if (view) view.innerHTML = `<img src="${escapeAttr(res.avatar_url)}" alt="" />`;
-        // Refresh cached user so other pages see the new avatar.
-        try { API.setUser(await API.get('/auth/me')); } catch (_) {}
-        panelMsg('photoMsg', 'success', 'Фото обновлено');
+        myProgress = await API.get('/student-progress/me');
       } catch (err) {
-        panelMsg('photoMsg', 'error', err.message || 'Не удалось загрузить');
+        console.warn('Не удалось загрузить прогресс профиля:', err);
       }
-    });
-
-    $('#profilePhotoRemove')?.addEventListener('click', async () => {
-      if (!confirm('Убрать фото профиля?')) return;
-      try {
-        await API.patch('/users/me/avatar', { avatar_url: null });
-        const view = $('#profilePhotoView');
-        const init = (me.name || '?').trim().charAt(0).toUpperCase();
-        if (view) view.innerHTML = `<span class="profile-photo__initial">${init}</span>`;
-        $('#profilePhotoRemove')?.remove();
-        try { API.setUser(await API.get('/auth/me')); } catch (_) {}
-        panelMsg('photoMsg', 'success', 'Фото удалено');
-      } catch (err) { panelMsg('photoMsg', 'error', err.message); }
-    });
-
-    // ── Avatar upload ──────────────────────────────────────
-    // We resize the chosen image client-side to a 400×400 square JPEG
-    // (~50–100 KB) before sending. This keeps the row small in Postgres
-    // and avoids paying for object storage. The DB stores a data: URL.
-    const photoInput  = $('#profilePhotoInput');
-    const photoView   = $('#profilePhotoView');
-    const photoRemove = $('#profilePhotoRemove');
-    const photoMsg    = (kind, text) => panelMsg('photoMsg', kind, text);
-
-    photoInput?.addEventListener('change', async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      if (!/^image\//.test(file.type)) {
-        photoMsg('error', 'Выберите файл-картинку');
-        return;
-      }
-      try {
-        const dataUrl = await resizeImageToDataUrl(file, 400, 0.85);
-        // Use a fairly conservative cap on the encoded size — most
-        // photos compressed to 400×400 jpeg @ 0.85 quality come out
-        // around 30-80 KB, well under our 700 KB server limit.
-        if (dataUrl.length > 600_000) {
-          photoMsg('error', 'Картинка слишком большая. Попробуйте другую.');
-          return;
-        }
-        const r = await API.patch('/users/me/avatar', { avatar_url: dataUrl });
-        if (photoView) {
-          photoView.innerHTML = `<img src="${escapeAttr(r.avatar_url)}" alt="" />`;
-        }
-        // Update cached user so the rest of the app sees the new avatar
-        // without having to refetch.
-        const cur = API.getUser();
-        if (cur) { cur.avatar_url = r.avatar_url; API.setUser(cur); }
-        photoMsg('success', 'Фото обновлено');
-        // Show "Убрать" button if it wasn't there
-        if (!$('#profilePhotoRemove')) {
-          const rmBtn = document.createElement('button');
-          rmBtn.className = 'btn'; rmBtn.id = 'profilePhotoRemove'; rmBtn.textContent = 'Убрать';
-          rmBtn.addEventListener('click', removeAvatar);
-          photoInput.parentNode.insertBefore(rmBtn, photoInput.nextSibling);
-        }
-      } catch (err) {
-        photoMsg('error', err.message || 'Не удалось обновить фото');
-      } finally {
-        photoInput.value = '';   // allow re-uploading the same file
-      }
-    });
-
-    async function removeAvatar() {
-      try {
-        await API.patch('/users/me/avatar', { avatar_url: null });
-        const cur = API.getUser();
-        if (cur) { cur.avatar_url = null; API.setUser(cur); }
-        const initialCh = (cur?.name || '?').trim().charAt(0).toUpperCase();
-        if (photoView) photoView.innerHTML = `<span class="profile-photo__initial">${initialCh}</span>`;
-        $('#profilePhotoRemove')?.remove();
-        photoMsg('success', 'Фото удалено');
-      } catch (err) { photoMsg('error', err.message); }
     }
-    photoRemove?.addEventListener('click', removeAvatar);
 
-    // ── Photo upload ────────────────────────────────────────
-    // Resize the picked image client-side to max 512px on the long
-    // edge and ~80% JPEG quality before sending — keeps the data URL
-    // under ~150 KB and the express.json limit happy.
-    $('#profilePhotoInput')?.addEventListener('change', async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      panelMsg('photoMsg', 'success', 'Подготовка…');
-      try {
-        const dataUrl = await resizeImageToDataURL(file, 512, 0.82);
-        await API.patch('/users/me/avatar', { avatar_url: dataUrl });
-        const view = $('#profilePhotoView');
-        if (view) view.innerHTML = `<img src="${dataUrl}" alt="" />`;
-        const me2 = API.getUser() || {};
-        API.setUser({ ...me2, avatar_url: dataUrl });
-        panelMsg('photoMsg', 'success', 'Фото обновлено');
-      } catch (err) {
-        panelMsg('photoMsg', 'error', err.message || 'Не удалось загрузить фото');
-      }
+    root.innerHTML = renderProfileScreen({
+      me,
+      bookings: myBookings,
+      bookingsError: myBookingsError,
+      progress: myProgress,
     });
-
-    $('#profilePhotoRemove')?.addEventListener('click', async () => {
-      if (!confirm('Убрать фото?')) return;
-      try {
-        await API.patch('/users/me/avatar', { avatar_url: null });
-        const view = $('#profilePhotoView');
-        if (view) view.innerHTML = `<span class="profile-photo__initial">${initial}</span>`;
-        const me2 = API.getUser() || {};
-        API.setUser({ ...me2, avatar_url: null });
-        $('#profilePhotoRemove')?.remove();
-        panelMsg('photoMsg', 'success', 'Фото удалено');
-      } catch (err) {
-        panelMsg('photoMsg', 'error', err.message);
-      }
-    });
-
-    // ── Photo upload ─────────────────────────────────────────
-    // Resize the picked image to ≤512px on each side (JPEG q=0.85)
-    // before encoding to data URL — keeps the payload under ~150 KB
-    // even for big phone photos.
-    $('#profilePhotoInput')?.addEventListener('change', async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      if (!/^image\//.test(file.type)) {
-        panelMsg('photoMsg', 'error', 'Файл должен быть изображением');
-        return;
-      }
-      panelMsg('photoMsg', 'success', 'Подготовка фото…');
-      try {
-        const dataUrl = await resizeImageToDataUrl(file, 512, 0.85);
-        await API.patch('/users/me/avatar', { avatar_url: dataUrl });
-        // Refresh cached user + UI without full reload.
-        const me2 = await API.get('/auth/me');
-        API.setUser(me2);
-        const view = $('#profilePhotoView');
-        if (view) view.innerHTML = `<img src="${escapeAttr(dataUrl)}" alt="" />`;
-        panelMsg('photoMsg', 'success', 'Фото обновлено');
-        // Re-render to surface the «Убрать» button if it wasn't there.
-        if (!$('#profilePhotoRemove')) initProfile();
-      } catch (err) {
-        panelMsg('photoMsg', 'error', err.message || 'Не удалось загрузить фото');
-      }
-    });
-
-    $('#profilePhotoRemove')?.addEventListener('click', async () => {
-      if (!confirm('Убрать фото профиля?')) return;
-      try {
-        await API.patch('/users/me/avatar', { avatar_url: null });
-        const me2 = await API.get('/auth/me');
-        API.setUser(me2);
-        initProfile();
-      } catch (err) {
-        panelMsg('photoMsg', 'error', err.message);
-      }
-    });
-
-    $('#logoutBtn').addEventListener('click', () => {
-      if (confirm('Выйти из аккаунта?')) logout();
-    });
+    bindProfileScreen(me);
   }
 
   // Resize a File/Blob image to fit within maxSide × maxSide and
