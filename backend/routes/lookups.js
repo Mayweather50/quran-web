@@ -29,7 +29,12 @@ router.get('/levels', async (req, res, next) => {
   try {
     const r = await query(
       `SELECT name FROM levels
-       ORDER BY name`
+       ORDER BY CASE name
+         WHEN 'Начальный' THEN 1
+         WHEN 'Средний' THEN 2
+         WHEN 'Продвинутый' THEN 3
+         ELSE 99
+       END, name`
     );
     res.json(r.rows);
   } catch (err) {
