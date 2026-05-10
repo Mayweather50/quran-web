@@ -167,13 +167,25 @@ router.post('/', requireAuth, async (req, res, next) => {
     //      Scoped across ALL teachers — a student can be in only one
     //      lesson at a time.
     const conflict = await query(
-      `SELECT id FROM bookings
-        WHERE student_id = $1 AND lesson_date = $2 AND time_slot = $3
-          AND status IN ('pending','confirmed')`,
+      `SELECT
+          b.id,
+          b.lesson_date AS date,
+          b.time_slot,
+          b.status,
+          COALESCE(t.name, b.teacher_name) AS teacher_name,
+          b.discipline_name AS discipline
+         FROM bookings b
+         LEFT JOIN teachers t ON t.id = b.teacher_id
+        WHERE b.student_id = $1 AND b.lesson_date = $2 AND b.time_slot = $3
+          AND b.status IN ('pending','confirmed')
+        LIMIT 1`,
       [finalStudentId, lesson_date, time_slot]
     );
     if (conflict.rows.length) {
-      return res.status(409).json({ error: 'Вы уже записаны на урок в это время' });
+      return res.status(409).json({
+        error: 'Вы уже записаны на урок в это время',
+        booking: conflict.rows[0],
+      });
     }
 
     // ---- Cache student name (snapshot, like Firestore doc)

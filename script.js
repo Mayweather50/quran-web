@@ -629,13 +629,70 @@
   let _bookingViewMonth = null;
   let _bookingMonthEvents = {};   // { day: 'green'|'gold' }
   let _bookingDaySlots = null;    // normalized [{ time, available, hot }]
+  let _bookingOwnBookings = null; // active bookings of the logged-in student
 
   // Slots already booked in this browser session: blocks duplicate submits
   // before the server's unique index would 409. A student cannot book
   // the same date/time even with a different teacher.
   const _bookedSlots = new Set();
   function bookedKey(teacherId, dateIso, time) {
-    return `${dateIso}|${time}`;
+    return `${dateIso}|${String(time || '').slice(0, 5)}`;
+  }
+
+  function bookingDateOf(b) {
+    return String(b?.date || b?.lesson_date || '').slice(0, 10);
+  }
+
+  function bookingTimeOf(b) {
+    return String(b?.time_slot || b?.time || '').slice(0, 5);
+  }
+
+  async function loadOwnBookingConflicts() {
+    _bookedSlots.clear();
+    const user = API.getUser();
+    if (!API.getToken() || user?.role !== 'student') {
+      _bookingOwnBookings = [];
+      return;
+    }
+
+    try {
+      const bookings = await API.get(`/bookings?scope=mine&from=${todayIsoLocal()}`);
+      _bookingOwnBookings = (bookings || []).filter((b) => (
+        ['pending', 'confirmed'].includes(b.status) &&
+        bookingDateOf(b) &&
+        bookingTimeOf(b)
+      ));
+      for (const b of _bookingOwnBookings) {
+        _bookedSlots.add(bookedKey(null, bookingDateOf(b), bookingTimeOf(b)));
+      }
+    } catch (err) {
+      console.warn('Не удалось загрузить записи ученика:', err);
+      _bookingOwnBookings = [];
+    }
+  }
+
+  function findOwnBookingAt(dateIso, time) {
+    const key = bookedKey(null, dateIso, time);
+    return (_bookingOwnBookings || []).find((b) => (
+      bookedKey(null, bookingDateOf(b), bookingTimeOf(b)) === key
+    )) || null;
+  }
+
+  function findOwnBookingOnSelectedDay() {
+    const dateIso = bookingDateIso(_selectedDay);
+    if (!dateIso) return null;
+    return (_bookingOwnBookings || []).find((b) => bookingDateOf(b) === dateIso) || null;
+  }
+
+  function ownBookingMessage(dateIso, time, booking) {
+    const dateText = russianDateWithYear(dateIso);
+    const teacherText = booking?.teacher_name ? ` у ${booking.teacher_name}` : '';
+    return `Вы уже записаны на урок${teacherText}: ${dateText}, ${String(time || '').slice(0, 5)}. Посмотреть запись можно в разделе «Расписание».`;
+  }
+
+  function showOwnBookingNotice(dateIso, time, booking) {
+    const shouldOpenSchedule = confirm(`${ownBookingMessage(dateIso, time, booking)}\n\nОткрыть расписание?`);
+    if (shouldOpenSchedule) window.location.href = 'schedule.html';
   }
 
   // Day-of-month + currently viewed month  ->  'YYYY-MM-DD'
@@ -886,8 +943,13 @@
     }
 
     if (!hasBookableSlot) {
+      const own = findOwnBookingOnSelectedDay();
       cta.disabled = true;
-      if (note) note.textContent = 'Выберите дату со свободным временем';
+      if (note) {
+        note.textContent = own
+          ? `Уже записаны: ${russianDateWithYear(bookingDateOf(own))}, ${bookingTimeOf(own)}`
+          : 'Выберите дату со свободным временем';
+      }
       return;
     }
 
@@ -918,8 +980,13 @@
       ? _bookingDaySlots
       : [];
 
-    if (!slots.length || !slots.some((s) => s.available && !isSlotBooked(s))) {
-      slot.innerHTML = `<p class="empty-state">На этот день нет свободных слотов</p>`;
+    const hasBookableSlot = slots.some((s) => s.available && !isSlotBooked(s));
+
+    if (!slots.length || !hasBookableSlot) {
+      const own = findOwnBookingOnSelectedDay();
+      slot.innerHTML = own
+        ? `<p class="empty-state">${ownBookingMessage(bookingDateOf(own), bookingTimeOf(own), own)}</p>`
+        : `<p class="empty-state">На этот день нет свободных слотов</p>`;
       _selectedSlotIndex = null;
       return;
     }
@@ -943,9 +1010,11 @@
         // Just a "Группа" hint for group slots — the platform allows
         // unlimited students per (teacher, date, time), so a numeric
         // "free/total" badge would be misleading.
-        const badge = s.is_group
-          ? `<span class="slot-cap" title="Групповой урок">Группа</span>`
-          : '';
+        const badge = booked
+          ? `<span class="slot-cap" title="Вы уже записаны на это время">Ваша запись</span>`
+          : s.is_group
+            ? `<span class="slot-cap" title="Групповой урок">Группа</span>`
+            : '';
 
         return `
           <button class="${cls.join(' ')}" data-slot="${i}" ${s.available && !booked ? '' : 'disabled'}>
@@ -971,7 +1040,10 @@
     if (!slot || !DB.booking) return;
 
     if (Array.isArray(_bookingDaySlots) && !getBookableBookingSlots().length) {
-      slot.innerHTML = `<p class="empty-state">На выбранную дату у преподавателя нет доступного времени</p>`;
+      const own = findOwnBookingOnSelectedDay();
+      slot.innerHTML = own
+        ? `<p class="empty-state">${ownBookingMessage(bookingDateOf(own), bookingTimeOf(own), own)}</p>`
+        : `<p class="empty-state">На выбранную дату у преподавателя нет доступного времени</p>`;
       return;
     }
 
@@ -1068,6 +1140,7 @@
         _bookingViewMonth = null;
         _bookingMonthEvents = {};
         _bookingDaySlots = null;
+        _bookingOwnBookings = null;
       }
       if (doc.body.classList.contains('page-schedule')) {
         _scheduleData = null;
@@ -1114,11 +1187,13 @@
     _bookingViewMonth = null;
     _bookingMonthEvents = {};
     _bookingDaySlots = null;
+    _bookingOwnBookings = null;
     _selectedDay = null;
     _selectedSlotIndex = null;
 
     renderBookingHero();
     renderBookingGroup();
+    await loadOwnBookingConflicts();
     renderBookingStats();
 
     // Teacher must be loaded before the calendar fetches event dots —
@@ -1166,7 +1241,8 @@
       if (!lessonDate) { alert('Не удалось сформировать дату.');          return; }
 
       if (_bookedSlots.has(bookedKey(t.id, lessonDate, slotData.time))) {
-        alert('Вы уже записаны на этот слот.');
+        const existing = findOwnBookingAt(lessonDate, slotData.time);
+        showOwnBookingNotice(lessonDate, slotData.time, existing);
         return;
       }
 
@@ -1217,13 +1293,15 @@
         console.error('Booking failed:', err);
         if (err.status === 409) {
           // Server says the slot is taken — sync UI to that truth.
+          await loadOwnBookingConflicts();
+          const existing = err.data?.booking || findOwnBookingAt(lessonDate, slotData.time);
           _bookedSlots.add(bookedKey(t.id, lessonDate, slotData.time));
           _selectedSlotIndex = null;
           renderBookingSlots();
           renderBookingStats();
           await renderBookingTeacher();
           syncBookingCtaState();
-          alert('Вы уже записаны на урок в это время.');
+          showOwnBookingNotice(lessonDate, slotData.time, existing);
         } else if (err.status === 400) {
           alert(`Ошибка данных: ${err.message}`);
         } else {
