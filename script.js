@@ -1261,7 +1261,7 @@
       if (ctaLabelEl) ctaLabelEl.textContent = 'Запись…';
 
       try {
-        // Backend resolves student_id from CURRENT_USER_ID env and fills
+        // Backend resolves student_id from the JWT user and fills
         // teacher_name from teachers.name by teacher_id — we don't send those.
         const result = await API.post('/bookings', {
           teacher_id: t.id,
@@ -1286,8 +1286,6 @@
           teacherName: result?.teacher_name || t.name,
           meetingUrl: result?.meeting_url || result?.zoom_link || '',
           isGroup: !!slotData.is_group,
-          capacity: slotData.capacity,
-          booked: (slotData.booked || 0) + 1,
         });
       } catch (err) {
         console.error('Booking failed:', err);
@@ -1393,14 +1391,14 @@
   ========================================================= */
   function showBookingSuccessModal({
     ageGroup, groupLabel = 'Группа', dateIso, time, teacherName,
-    meetingUrl, isGroup, capacity, booked,
+    meetingUrl, isGroup,
   } = {}) {
     // Avoid stacking multiple modals.
     document.querySelectorAll('.success-modal').forEach((n) => n.remove());
 
     const dateText = russianDateWithYear(dateIso);
-    const seatsText = isGroup && capacity
-      ? `<span class="success-seats">${booked}/${capacity} мест</span>`
+    const seatsText = isGroup
+      ? `<span class="success-seats">Групповой урок</span>`
       : '';
     const linkBlock = meetingUrl
       ? `
@@ -2305,11 +2303,11 @@
           <div class="t-add-slot">
             <input type="time" id="t-new-slot-time" />
             <input type="number" id="t-new-slot-cap" min="1" max="50" value="1"
-                   title="Сколько учеников может записаться на этот слот"
-                   aria-label="Мест" />
+                   title="1 — индивидуальный слот, 2+ — групповой слот"
+                   aria-label="Формат слота" />
             <button class="btn-action" id="t-add-slot-btn">Добавить слот</button>
           </div>
-          <p class="t-add-slot-hint">Поле «мест» — сколько учеников могут записаться на один слот. <strong>1</strong> — индивидуальный урок, <strong>2+</strong> — групповой.</p>
+          <p class="t-add-slot-hint">Поле формата: <strong>1</strong> — индивидуальный урок, <strong>2+</strong> — групповой. Это не ограничивает запись учеников.</p>
         </div>
       </section>
     `;
@@ -2528,34 +2526,28 @@
       const booked = s.booked || 0;
       const isGroup = cap > 1;
       const hasBookings = booked > 0;
-      const isFull = booked >= cap;
 
       const chipCls = ['t-slot-chip'];
       if (isGroup)      chipCls.push('is-group');
-      if (isFull)       chipCls.push('is-full');
-      if (hasBookings && !isFull) chipCls.push('has-bookings');
+      if (hasBookings)  chipCls.push('has-bookings');
 
-      // For group slots show "5/8". For individual slots: nothing
-      // unless booked, in which case show "1/1" too so the teacher
-      // sees the booking exists.
-      const badge = (isGroup || hasBookings)
-        ? `<span class="t-slot-cap" title="записано / всего мест">${booked}/${cap}</span>`
-        : '';
+      const badges = [
+        isGroup ? `<span class="t-slot-cap" title="Групповой слот">Группа</span>` : '',
+        hasBookings ? `<span class="t-slot-cap" title="Записано учеников">${booked} запис.</span>` : '',
+      ].filter(Boolean).join('');
 
       // Allow deletion only when nothing is booked yet.
       const delBtn = hasBookings
         ? ''
         : `<button class="t-slot-delete" data-action="delete-slot" aria-label="Удалить слот">×</button>`;
 
-      // "Edit capacity" button is always available (the API refuses
-      // to drop capacity below `booked`, so it's safe).
       const editBtn = `<button class="t-slot-edit" data-action="edit-cap"
-                              aria-label="Изменить вместимость" title="Изменить вместимость">⚙</button>`;
+                              aria-label="Изменить формат" title="Изменить формат">⚙</button>`;
 
       return `
         <span class="${chipCls.join(' ')}" data-time="${time}" data-cap="${cap}" data-booked="${booked}">
           <span class="t-slot-time">${time}</span>
-          ${badge}
+          ${badges}
           ${editBtn}
           ${delBtn}
         </span>
@@ -2580,7 +2572,7 @@
         const curCap = parseInt(chip.dataset.cap, 10) || 1;
         const booked = parseInt(chip.dataset.booked, 10) || 0;
         const raw = prompt(
-          `Слот ${time}\nЗаписано учеников: ${booked}\nВместимость (1 = индивидуально, 2+ = группа):`,
+          `Слот ${time}\nЗаписано учеников: ${booked}\nФормат (1 = индивидуально, 2+ = группа, не лимит мест):`,
           String(curCap)
         );
         if (raw === null) return;

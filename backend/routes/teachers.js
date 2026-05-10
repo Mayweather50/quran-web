@@ -270,8 +270,8 @@ async function assertCanManageSlots(teacherId, user) {
 
 // POST /api/teachers/:id/slots
 // body: { date, time, duration_minutes?, capacity? }
-//   capacity defaults to 1 (individual). Set capacity > 1 to allow
-//   multiple students to book the same slot (group lesson).
+//   capacity defaults to 1 (individual). Set capacity > 1 to mark
+//   the slot as a group lesson. It does not limit bookings.
 router.post('/:id/slots', requireAuth, async (req, res, next) => {
   try {
     await assertCanManageSlots(req.params.id, req.user);
@@ -310,8 +310,8 @@ router.post('/:id/slots', requireAuth, async (req, res, next) => {
 
 // PATCH /api/teachers/:id/slots
 // body: { date, time, capacity? }
-//   Lets the teacher change capacity later. Refuses to drop capacity
-//   below the current number of active bookings on the slot.
+//   Lets the teacher change the individual/group marker later.
+//   This value does not limit bookings.
 router.patch('/:id/slots', requireAuth, async (req, res, next) => {
   try {
     await assertCanManageSlots(req.params.id, req.user);
@@ -324,18 +324,6 @@ router.patch('/:id/slots', requireAuth, async (req, res, next) => {
     const time = rawTime.length === 5 ? rawTime + ':00' : rawTime;
 
     const newCap = Math.max(1, parseInt(req.body?.capacity, 10) || 1);
-
-    const taken = await query(
-      `SELECT COUNT(*)::int AS n FROM bookings
-        WHERE teacher_id = $1 AND lesson_date = $2 AND time_slot = $3
-          AND status IN ('pending','confirmed')`,
-      [req.params.id, date, time]
-    );
-    if (newCap < taken.rows[0].n) {
-      return res.status(409).json({
-        error: `Уже записано ${taken.rows[0].n} учеников — нельзя установить вместимость меньше`,
-      });
-    }
 
     const upd = await query(
       `UPDATE teacher_schedule_slots

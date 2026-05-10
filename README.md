@@ -129,11 +129,11 @@ node scripts/set-user-password.js admin@quran.com admin12345
 | capacity | смысл |
 |---|---|
 | 1 | индивидуальный урок |
-| 2+ | групповой: до N учеников могут записаться на тот же слот |
+| 2+ | групповой формат |
 
-Защита от двойной записи одним и тем же учеником, проверки идут в транзакции с `SELECT … FOR UPDATE`. Уменьшить capacity ниже фактически забронированного нельзя.
+`capacity` не ограничивает запись. Много учеников могут записаться к одному преподавателю на одну дату и время. Один ученик не может записаться на два урока в одну дату и время, даже к разным преподавателям.
 
-В кабинете преподавателя при добавлении слота указывайте «мест», у существующих слотов кнопка ⚙ меняет вместимость.
+В кабинете преподавателя поле формата: `1` — индивидуальный урок, `2+` — групповой. Кнопка ⚙ меняет только формат слота, а не лимит мест.
 
 ---
 
@@ -146,25 +146,24 @@ node scripts/set-user-password.js admin@quran.com admin12345
 
 ---
 
-## ☁️ Деплой на Netlify
+## ☁️ Деплой
 
-Netlify хостит **только статику** — Express + PostgreSQL туда не зальются. Все доменные данные загружаются только через API, поэтому backend нужен обязательно.
+Frontend можно хостить на GitHub Pages или другом статическом хостинге. Express + PostgreSQL туда не зальются: backend и база нужны отдельно или на своём VPS.
 
-1. Задеплойте папку `backend/` на любой хостинг с поддержкой Node.js + Postgres: **Render**, **Railway**, **Fly.io**, **Heroku** и т.п. Все они дают бесплатный тариф.
-   - Установите переменные окружения: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `FRONTEND_ORIGIN=https://hifz-center.netlify.app`.
+1. Задеплойте папку `backend/` на VPS или любой хостинг с поддержкой Node.js + PostgreSQL.
+   - Установите переменные окружения: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `FRONTEND_ORIGIN=https://hifz-center.site,https://www.hifz-center.site`.
    - Запустите `npm run migrate` и `npm run seed` (большинство хостингов дают одноразовый shell или job hooks).
-2. В Netlify откройте **Site settings → Build & deploy → Environment** и добавьте переменную:
+2. Во frontend-файле `_config.js` укажите адрес backend API:
    ```
-   API_BASE = https://hifz-center-api.onrender.com/api
+   window.__API_BASE__ = 'https://your-api-domain.example/api';
    ```
-   (URL подставьте свой).
-3. Триггерните redeploy. На каждом билде `netlify.toml` запишет `_config.js` с этим URL, фронт начнёт стучаться к вашему API.
+3. Для GitHub Pages в репозитории уже есть `CNAME` и `.nojekyll`.
 
 ### Как это устроено
 
 | Файл | Роль |
 |---|---|
-| `netlify.toml` | publish=`.`, build пишет `_config.js` из `$API_BASE` |
-| `_config.js` | На локальной разработке пустой; на Netlify содержит `window.__API_BASE__ = '...'` |
+| `netlify.toml` | старый вариант деплоя на Netlify, можно не использовать при GitHub Pages/VPS |
+| `_config.js` | содержит `window.__API_BASE__ = '...'` |
 | `api.js` | Читает `window.__API_BASE__` или `<meta name="api-base">`, иначе по умолчанию `http://localhost:3001/api` |
 | `script.js` | Загружает возрастные группы, уровни, преподавателей, цитаты, слоты и расписание через API |
