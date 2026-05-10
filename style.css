@@ -1078,11 +1078,16 @@ svg { width: 100%; height: 100%; }
   display: inline-block;
 }
 .group-image {
-  width: 130px;
-  align-self: stretch;
-  background-size: contain;
-  background-position: right center;
+  width: 58px;
+  height: 58px;
+  align-self: center;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
   background-repeat: no-repeat;
+  background-color: rgba(45,95,63,0.08);
+  border: 1px solid rgba(45,95,63,0.12);
+  box-shadow: inset 0 0 0 4px rgba(255,255,255,0.42);
   flex-shrink: 0;
 }
 .group-image[data-img="boy-4-6"]    { background-image: url('assets/images/boy-4-6.png'); }
@@ -2013,7 +2018,7 @@ svg { width: 100%; height: 100%; }
   .group-title { font-size: 22px; margin: 0 0 3px; }
   .group-eyebrow { font-size: 11px; }
   .group-tags { font-size: 12px; gap: 5px; }
-  .group-image { width: 90px; }
+  .group-image { width: 48px; height: 48px; }
   .group-badge { right: 12px; bottom: 10px; font-size: 10.5px; padding: 3px 9px; }
 
   /* Tabs */
