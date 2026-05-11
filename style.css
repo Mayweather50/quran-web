@@ -2208,7 +2208,15 @@ svg { width: 100%; height: 100%; }
   .site-header { background: rgba(242,235,224,0.85); backdrop-filter: blur(14px); }
   .site-header.scrolled { background: rgba(242,235,224,0.95); }
 
+  .page-home .site-header {
+    display: none;
+  }
+
   .hero-full { min-height: 480px; }
+  .page-home .hero-full {
+    margin-top: 0;
+    padding-top: 0;
+  }
   .hero-full__inner { padding-top: 30px; padding-bottom: 60px; gap: 24px; }
   .hero-full__bg { background-position: 70% center; }
   .hero-full__fade {
