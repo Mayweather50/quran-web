@@ -1,1 +1,1 @@
-window.__API_BASE__ = 'https://quran-backend-tjui.onrender.com/api';
+window.__API_BASE__ = '/api';
