@@ -13,6 +13,7 @@ const { query, shutdown } = require('./db');
 const { attachUser } = require('./auth');
 
 const app = express();
+const isProduction = process.env.NODE_ENV === 'production';
 
 // ---------------------------------------------------------------
 // CORS
@@ -27,10 +28,14 @@ const allowedOrigins = (process.env.FRONTEND_ORIGIN ||
 // because Live Server / vite / etc. don't always pick 5500.
 function isOriginAllowed(origin) {
   if (!origin) return true; // curl, Postman, server-to-server
-  if (origin === 'null' && process.env.ALLOW_FILE_ORIGIN !== 'false') return true; // local file:// development
-  if (allowedOrigins.includes('*')) return true;
+  if (allowedOrigins.includes('*')) return !isProduction;
   if (allowedOrigins.includes(origin)) return true;
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+  if (!isProduction && origin === 'null' && process.env.ALLOW_FILE_ORIGIN !== 'false') {
+    return true; // local file:// development
+  }
+  if (!isProduction && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    return true; // local dev servers
+  }
   return false;
 }
 

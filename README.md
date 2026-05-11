@@ -150,6 +150,13 @@ node scripts/set-user-password.js admin@quran.com admin12345
 
 Frontend можно хостить на GitHub Pages или другом статическом хостинге. Express + PostgreSQL туда не зальются: backend и база нужны отдельно или на своём VPS.
 
+Для официального релиза на одном VPS используйте готовую инструкцию:
+
+* [docs/VPS_RELEASE.md](docs/VPS_RELEASE.md) — установка Ubuntu/Node/PostgreSQL/Nginx, домен, SSL, systemd.
+* [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) — короткий чеклист перед открытием сайта.
+* `backend/.env.production.example` — шаблон production-переменных.
+* `npm run preflight` в папке `backend/` — автоматическая проверка env, БД, таблиц и индекса бронирований.
+
 1. Задеплойте папку `backend/` на VPS или любой хостинг с поддержкой Node.js + PostgreSQL.
    - Установите переменные окружения: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `FRONTEND_ORIGIN=https://hifz-center.site,https://www.hifz-center.site`.
    - Запустите `npm run migrate` и `npm run seed` (большинство хостингов дают одноразовый shell или job hooks).

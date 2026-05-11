@@ -9,12 +9,15 @@ const { query } = require('../db');
 router.get('/', async (req, res) => {
   try {
     const r = await query('SELECT 1 AS ok, now() AS ts');
-    res.json({
+    const payload = {
       status: 'ok',
       database: 'connected',
       timestamp: r.rows[0].ts,
-      currentUserId: process.env.CURRENT_USER_ID || null,
-    });
+    };
+    if (process.env.NODE_ENV !== 'production') {
+      payload.currentUserId = process.env.CURRENT_USER_ID || null;
+    }
+    res.json(payload);
   } catch (err) {
     res.status(503).json({
       status: 'error',
