@@ -1463,7 +1463,7 @@ svg { width: 100%; height: 100%; }
   width: 12px; height: 12px;
   color: var(--gold-soft);
 }
-/* Group lesson slots: small badge "free/total" + gold ring. */
+/* Group lesson slots keep a subtle gold ring without a visible label. */
 .slot-btn.is-group {
   border-color: var(--gold-soft);
   box-shadow: inset 0 0 0 1px rgba(196,154,79,0.18);

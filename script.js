@@ -1044,14 +1044,11 @@
         if (s.hot && !isActive && !booked) cls.push('is-hot');
         if (s.is_group) cls.push('is-group');
 
-        // Just a "Группа" hint for group slots — the platform allows
-        // unlimited students per (teacher, date, time), so a numeric
-        // "free/total" badge would be misleading.
+        // Keep only the duplicate-booking hint. Group slots are still styled
+        // visually, but the visible "Группа" label is intentionally hidden.
         const badge = booked
           ? `<span class="slot-cap" title="Вы уже записаны на это время">Ваша запись</span>`
-          : s.is_group
-            ? `<span class="slot-cap" title="Групповой урок">Группа</span>`
-            : '';
+          : '';
 
         return `
           <button class="${cls.join(' ')}" data-slot="${i}" ${s.available && !booked ? '' : 'disabled'}>
