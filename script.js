@@ -2272,6 +2272,7 @@
   let _teacherSlotDate = null;        // 'YYYY-MM-DD' currently picked in slots-calendar
   let _teacherSlotsViewYear  = null;
   let _teacherSlotsViewMonth = null;
+  let _teacherSlotLinkEditorTime = null;
 
   function detectMeetingProvider(url) {
     if (!url) return null;
@@ -2337,6 +2338,7 @@
           <div class="t-slots-list" data-render="teacher-slots-list">
             <p class="empty-state">Загрузка…</p>
           </div>
+          <div class="t-slot-link-editor" data-render="teacher-slot-link-editor" hidden></div>
           <div class="t-add-slot">
             <input type="time" id="t-new-slot-time" />
             <input type="number" id="t-new-slot-cap" min="1" max="50" value="1"
@@ -2554,6 +2556,7 @@
 
     if (!slots.length) {
       slot.innerHTML = `<p class="empty-state">На этот день нет слотов</p>`;
+      renderTeacherSlotLinkEditor([]);
       return;
     }
 
@@ -2563,14 +2566,18 @@
       const booked = s.booked || 0;
       const isGroup = cap > 1;
       const hasBookings = booked > 0;
+      const meetingUrl = s.meeting_url || '';
+      const hasLink = !!meetingUrl;
 
       const chipCls = ['t-slot-chip'];
       if (isGroup)      chipCls.push('is-group');
       if (hasBookings)  chipCls.push('has-bookings');
+      if (hasLink)      chipCls.push('has-link');
 
       const badges = [
         isGroup ? `<span class="t-slot-cap" title="Групповой слот">Группа</span>` : '',
         hasBookings ? `<span class="t-slot-cap" title="Записано учеников">${booked} запис.</span>` : '',
+        hasLink ? `<span class="t-slot-cap t-slot-link-badge" title="Ссылка уже добавлена">Ссылка</span>` : '',
       ].filter(Boolean).join('');
 
       // Allow deletion only when nothing is booked yet.
@@ -2580,11 +2587,15 @@
 
       const editBtn = `<button class="t-slot-edit" data-action="edit-cap"
                               aria-label="Изменить формат" title="Изменить формат">⚙</button>`;
+      const linkBtn = `<button class="t-slot-link-btn" data-action="slot-link"
+                              aria-label="${hasLink ? 'Изменить ссылку урока' : 'Добавить ссылку урока'}"
+                              title="${hasLink ? 'Изменить ссылку урока' : 'Добавить ссылку урока'}">${icon('video')}</button>`;
 
       return `
         <span class="${chipCls.join(' ')}" data-time="${time}" data-cap="${cap}" data-booked="${booked}">
           <span class="t-slot-time">${time}</span>
           ${badges}
+          ${linkBtn}
           ${editBtn}
           ${delBtn}
         </span>
@@ -2602,6 +2613,11 @@
           );
           await reloadTeacherSlotsForDay();
         } catch (err) { alert(err.message); }
+      });
+
+      chip.querySelector('[data-action="slot-link"]')?.addEventListener('click', () => {
+        _teacherSlotLinkEditorTime = chip.dataset.time;
+        renderTeacherSlotLinkEditor(slots);
       });
 
       chip.querySelector('[data-action="edit-cap"]')?.addEventListener('click', async () => {
@@ -2623,6 +2639,82 @@
           await reloadTeacherSlotsForDay();
         } catch (err) { alert(err.message); }
       });
+    });
+
+    renderTeacherSlotLinkEditor(slots);
+  }
+
+  function renderTeacherSlotLinkEditor(slots) {
+    const editor = $('[data-render="teacher-slot-link-editor"]');
+    if (!editor) return;
+
+    const selected = (slots || []).find((s) =>
+      String(s.slot_time || '').slice(0, 5) === _teacherSlotLinkEditorTime
+    );
+
+    if (!selected) {
+      editor.hidden = true;
+      editor.innerHTML = '';
+      return;
+    }
+
+    const time = String(selected.slot_time || '').slice(0, 5);
+    const meetingUrl = selected.meeting_url || '';
+
+    editor.hidden = false;
+    editor.innerHTML = `
+      <div class="t-slot-link-card">
+        <div>
+          <strong>Ссылка для слота ${time}</strong>
+          <small>Она автоматически появится у учеников, которые запишутся на этот урок.</small>
+        </div>
+        <div class="t-slot-link-row">
+          <input type="url" data-slot-link-input placeholder="https://zoom.us/j/..." value="${escapeAttr(meetingUrl)}" />
+          <button class="btn-action" data-action="slot-link-save">Сохранить</button>
+          ${meetingUrl ? `<button class="btn-action btn-action--ghost" data-action="slot-link-clear">Убрать</button>` : ''}
+          <button class="t-slot-link-close" data-action="slot-link-close" aria-label="Закрыть">×</button>
+        </div>
+      </div>
+    `;
+
+    editor.querySelector('[data-action="slot-link-save"]')?.addEventListener('click', async () => {
+      const input = editor.querySelector('[data-slot-link-input]');
+      const url = (input?.value || '').trim();
+      try {
+        await API.patch(
+          `/teachers/${encodeURIComponent(_teacherProfile.id)}/slots`,
+          {
+            date: _teacherSlotDate,
+            time,
+            meeting_url: url || null,
+            meeting_provider: url ? detectMeetingProvider(url) : null,
+          }
+        );
+        _teacherSlotLinkEditorTime = time;
+        await reloadTeacherSlotsForDay();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    editor.querySelector('[data-action="slot-link-clear"]')?.addEventListener('click', async () => {
+      if (!confirm(`Убрать ссылку у слота ${time}?`)) return;
+      try {
+        await API.patch(
+          `/teachers/${encodeURIComponent(_teacherProfile.id)}/slots`,
+          { date: _teacherSlotDate, time, meeting_url: null, meeting_provider: null }
+        );
+        _teacherSlotLinkEditorTime = time;
+        await reloadTeacherSlotsForDay();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    editor.querySelector('[data-action="slot-link-close"]')?.addEventListener('click', () => {
+      _teacherSlotLinkEditorTime = null;
+      editor.hidden = true;
+      editor.innerHTML = '';
     });
   }
 

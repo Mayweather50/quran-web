@@ -111,6 +111,8 @@ router.get('/me/slots', requireRole('teacher'), async (req, res, next) => {
         s.slot_time,
         s.duration_minutes,
         s.capacity,
+        s.meeting_provider,
+        s.meeting_url,
         s.is_available AS schedule_available,
         COALESCE((
           SELECT COUNT(*) FROM bookings b
@@ -130,6 +132,8 @@ router.get('/me/slots', requireRole('teacher'), async (req, res, next) => {
       slot_time: row.slot_time,
       duration_minutes: row.duration_minutes,
       capacity: row.capacity,
+      meeting_provider: row.meeting_provider,
+      meeting_url: row.meeting_url,
       booked: row.booked,
       free: Math.max(0, row.capacity - row.booked),
       is_group: row.capacity > 1,

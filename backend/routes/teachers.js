@@ -268,8 +268,35 @@ async function assertCanManageSlots(teacherId, user) {
   return true;
 }
 
+function normalizeOptionalMeetingUrl(value) {
+  if (value === undefined) return undefined;
+  const url = String(value || '').trim();
+  if (!url) return null;
+
+  try {
+    const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new Error('Invalid protocol');
+    }
+  } catch (_) {
+    throw Object.assign(new Error('meeting_url must be a valid http(s) URL'), { status: 400 });
+  }
+
+  return url;
+}
+
+function normalizeMeetingProvider(value, url) {
+  const provider = String(value || '').trim();
+  if (provider) return provider.slice(0, 40);
+  if (!url) return null;
+  if (/zoom\./i.test(url)) return 'Zoom';
+  if (/meet\.google/i.test(url)) return 'Google Meet';
+  if (/teams\.(microsoft|live)/i.test(url)) return 'MS Teams';
+  return 'Online';
+}
+
 // POST /api/teachers/:id/slots
-// body: { date, time, duration_minutes?, capacity? }
+// body: { date, time, duration_minutes?, capacity?, meeting_url?, meeting_provider? }
 //   capacity defaults to 1 (individual). Set capacity > 1 to mark
 //   the slot as a group lesson. It does not limit bookings.
 router.post('/:id/slots', requireAuth, async (req, res, next) => {
@@ -280,6 +307,8 @@ router.post('/:id/slots', requireAuth, async (req, res, next) => {
     const rawTime = String(req.body?.time || '');
     const dur = parseInt(req.body?.duration_minutes, 10) || 45;
     const capacity = Math.max(1, parseInt(req.body?.capacity, 10) || 1);
+    const meetingUrl = normalizeOptionalMeetingUrl(req.body?.meeting_url);
+    const meetingProvider = normalizeMeetingProvider(req.body?.meeting_provider, meetingUrl);
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return res.status(400).json({ error: 'date (YYYY-MM-DD) required' });
@@ -291,11 +320,11 @@ router.post('/:id/slots', requireAuth, async (req, res, next) => {
 
     const ins = await query(
       `INSERT INTO teacher_schedule_slots
-         (teacher_id, slot_date, slot_time, is_available, duration_minutes, capacity)
-       VALUES ($1, $2, $3, TRUE, $4, $5)
+         (teacher_id, slot_date, slot_time, is_available, duration_minutes, capacity, meeting_provider, meeting_url)
+       VALUES ($1, $2, $3, TRUE, $4, $5, $6, $7)
        ON CONFLICT (teacher_id, slot_date, slot_time) DO NOTHING
-       RETURNING id, slot_date, slot_time, duration_minutes, capacity, is_available`,
-      [req.params.id, date, time, dur, capacity]
+       RETURNING id, slot_date, slot_time, duration_minutes, capacity, is_available, meeting_provider, meeting_url`,
+      [req.params.id, date, time, dur, capacity, meetingProvider, meetingUrl || null]
     );
 
     if (!ins.rows.length) {
@@ -309,7 +338,7 @@ router.post('/:id/slots', requireAuth, async (req, res, next) => {
 });
 
 // PATCH /api/teachers/:id/slots
-// body: { date, time, capacity? }
+// body: { date, time, capacity?, meeting_url?, meeting_provider? }
 //   Lets the teacher change the individual/group marker later.
 //   This value does not limit bookings.
 router.patch('/:id/slots', requireAuth, async (req, res, next) => {
@@ -323,16 +352,55 @@ router.patch('/:id/slots', requireAuth, async (req, res, next) => {
     }
     const time = rawTime.length === 5 ? rawTime + ':00' : rawTime;
 
-    const newCap = Math.max(1, parseInt(req.body?.capacity, 10) || 1);
+    const updates = [];
+    const params = [req.params.id, date, time];
+    const hasCapacity = Object.prototype.hasOwnProperty.call(req.body || {}, 'capacity');
+    const hasMeetingUrl = Object.prototype.hasOwnProperty.call(req.body || {}, 'meeting_url');
+
+    if (hasCapacity) {
+      const newCap = Math.max(1, parseInt(req.body?.capacity, 10) || 1);
+      params.push(newCap);
+      updates.push(`capacity = $${params.length}`);
+    }
+
+    let meetingUrl;
+    let meetingProvider;
+    if (hasMeetingUrl) {
+      meetingUrl = normalizeOptionalMeetingUrl(req.body?.meeting_url);
+      meetingProvider = normalizeMeetingProvider(req.body?.meeting_provider, meetingUrl);
+      params.push(meetingProvider);
+      updates.push(`meeting_provider = $${params.length}`);
+      params.push(meetingUrl);
+      updates.push(`meeting_url = $${params.length}`);
+    }
+
+    if (!updates.length) {
+      return res.status(400).json({ error: 'Nothing to update' });
+    }
 
     const upd = await query(
       `UPDATE teacher_schedule_slots
-          SET capacity = $4
+          SET ${updates.join(', ')}
         WHERE teacher_id = $1 AND slot_date = $2 AND slot_time = $3
-        RETURNING id, slot_date, slot_time, duration_minutes, capacity, is_available`,
-      [req.params.id, date, time, newCap]
+        RETURNING id, slot_date, slot_time, duration_minutes, capacity, is_available, meeting_provider, meeting_url`,
+      params
     );
     if (!upd.rows.length) return res.status(404).json({ error: 'Slot not found' });
+
+    if (hasMeetingUrl) {
+      await query(
+        `UPDATE bookings
+            SET meeting_provider = $4,
+                meeting_url = $5,
+                updated_at = now()
+          WHERE teacher_id = $1
+            AND lesson_date = $2
+            AND time_slot = $3
+            AND status IN ('pending','confirmed')`,
+        [req.params.id, date, time, meetingProvider, meetingUrl]
+      );
+    }
+
     res.json(upd.rows[0]);
   } catch (err) {
     if (err.status) return res.status(err.status).json({ error: err.message });

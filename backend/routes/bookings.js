@@ -151,7 +151,7 @@ router.post('/', requireAuth, async (req, res, next) => {
     //      same time (group lesson model is enforced per-student, not
     //      per-slot).
     const slot = await query(
-      `SELECT is_available
+      `SELECT is_available, meeting_provider, meeting_url
          FROM teacher_schedule_slots
         WHERE teacher_id = $1 AND slot_date = $2 AND slot_time = $3`,
       [teacher_id, lesson_date, time_slot]
@@ -197,8 +197,9 @@ router.post('/', requireAuth, async (req, res, next) => {
     const ins = await query(
       `INSERT INTO bookings
          (student_id, teacher_id, student_name, teacher_name,
-          lesson_date, time_slot, status, discipline_name, is_public)
-       VALUES ($1,$2,$3,$4,$5,$6,'pending',$7,$8)
+          lesson_date, time_slot, status, discipline_name, is_public,
+          meeting_provider, meeting_url)
+       VALUES ($1,$2,$3,$4,$5,$6,'pending',$7,$8,$9,$10)
        RETURNING id`,
       [
         finalStudentId,
@@ -209,6 +210,8 @@ router.post('/', requireAuth, async (req, res, next) => {
         time_slot,
         discipline_name,
         !!is_public,
+        slot.rows[0].meeting_provider || null,
+        slot.rows[0].meeting_url || null,
       ]
     );
 

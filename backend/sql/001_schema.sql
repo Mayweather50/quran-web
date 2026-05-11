@@ -91,6 +91,8 @@ CREATE TABLE IF NOT EXISTS teacher_schedule_slots (
   is_available     BOOLEAN NOT NULL DEFAULT TRUE,
   duration_minutes INTEGER NOT NULL DEFAULT 45,
   capacity         INTEGER NOT NULL DEFAULT 1 CHECK (capacity >= 1),
+  meeting_provider TEXT,
+  meeting_url      TEXT,
   UNIQUE (teacher_id, slot_date, slot_time)
 );
 CREATE INDEX IF NOT EXISTS idx_slots_teacher_date ON teacher_schedule_slots(teacher_id, slot_date);
