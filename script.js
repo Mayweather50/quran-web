@@ -643,6 +643,7 @@
   // SPA navigation state
   let _sharedInitDone = false;
   let _isPopNav = false;
+  let _navSeq = 0;
 
   // ---- API caches (cleared on full page reload) ----
   let _teachersCache = null;        // full list from /api/teachers
@@ -662,6 +663,8 @@
   let _bookingMonthEvents = {};   // { day: 'green'|'gold' }
   let _bookingDaySlots = null;    // normalized [{ time, available, hot }]
   let _bookingOwnBookings = null; // active bookings of the logged-in student
+  let _bookingCalendarSeq = 0;
+  let _bookingSlotsSeq = 0;
 
   // Slots already booked in this browser session: blocks duplicate submits
   // before the server's unique index would 409. A student cannot book
@@ -724,7 +727,7 @@
 
   function showOwnBookingNotice(dateIso, time, booking) {
     const shouldOpenSchedule = confirm(`${ownBookingMessage(dateIso, time, booking)}\n\nОткрыть расписание?`);
-    if (shouldOpenSchedule) window.location.href = 'schedule.html';
+    if (shouldOpenSchedule) navigateTo('schedule.html');
   }
 
   // Day-of-month + currently viewed month  ->  'YYYY-MM-DD'
@@ -735,8 +738,8 @@
     return formatDateYYYYMMDD(year, month, day);
   }
 
-  async function ensureTeachers() {
-    if (_teachersCache) return _teachersCache;
+  async function ensureTeachers({ force = false } = {}) {
+    if (!force && _teachersCache) return _teachersCache;
     try {
       _teachersCache = await API.get('/teachers');
       return _teachersCache;
@@ -804,11 +807,22 @@
     // Fetch dots for the current (teacher, year, month). If anything fails
     // we keep whatever was already cached and don't blow up the UI.
     if (_bookingTeacher?.id) {
+      const requestSeq = ++_bookingCalendarSeq;
+      const teacherId = _bookingTeacher.id;
+      const year = _bookingViewYear;
+      const month = _bookingViewMonth;
       try {
         const data = await API.get(
-          `/teachers/${encodeURIComponent(_bookingTeacher.id)}/calendar` +
-          `?year=${_bookingViewYear}&month=${_bookingViewMonth}`
+          `/teachers/${encodeURIComponent(teacherId)}/calendar` +
+          `?year=${year}&month=${month}`
         );
+        if (
+          requestSeq !== _bookingCalendarSeq ||
+          !_bookingTeacher ||
+          _bookingTeacher.id !== teacherId ||
+          _bookingViewYear !== year ||
+          _bookingViewMonth !== month
+        ) return;
         _bookingMonthEvents = {};
         const days = data?.days || data || [];
         for (const d of days) {
@@ -818,6 +832,7 @@
         }
         drawBookingCalendarShell(slot);
       } catch (err) {
+        if (requestSeq !== _bookingCalendarSeq) return;
         console.warn('Не удалось загрузить календарь преподавателя:', err);
         // Use seed dots ONLY when viewing the seed's own month — otherwise
         // April's dots would leak into May/June when backend is down.
@@ -1000,14 +1015,26 @@
 
     // 1. Fetch slots for (teacher, selectedDay) from API; cache on _bookingDaySlots.
     if (_bookingDaySlots === null && _bookingTeacher?.id && _selectedDay) {
+      const requestSeq = ++_bookingSlotsSeq;
+      const teacherId = _bookingTeacher.id;
+      const requestDay = _selectedDay;
       const dateIso = bookingDateIso(_selectedDay);
+      slot.innerHTML = `<p class="empty-state">Загрузка свободного времени...</p>`;
       try {
         const data = await API.get(
-          `/teachers/${encodeURIComponent(_bookingTeacher.id)}/schedule?date=${dateIso}`
+          `/teachers/${encodeURIComponent(teacherId)}/schedule?date=${dateIso}`
         );
+        if (
+          requestSeq !== _bookingSlotsSeq ||
+          !_bookingTeacher ||
+          _bookingTeacher.id !== teacherId ||
+          _selectedDay !== requestDay ||
+          bookingDateIso(_selectedDay) !== dateIso
+        ) return;
         const arr = data?.slots || data || [];
         _bookingDaySlots = arr.map(normalizeApiSlot).filter((s) => s.time);
       } catch (err) {
+        if (requestSeq !== _bookingSlotsSeq) return;
         console.warn('Не удалось загрузить слоты дня:', err);
         _bookingDaySlots = [];
       }
@@ -1129,14 +1156,16 @@
   // ====================================================
   async function navigateTo(href) {
     if (!href || href === '#') return;
+    const navId = ++_navSeq;
 
     // Stop quote auto-rotation when leaving home
     if (_quoteTimer) { clearInterval(_quoteTimer); _quoteTimer = null; }
 
     try {
-      const res = await fetch(href);
+      const res = await fetch(href, { cache: 'no-store', credentials: 'same-origin' });
       if (!res.ok) throw new Error('fetch failed');
       const html = await res.text();
+      if (navId !== _navSeq) return;
       const doc = new DOMParser().parseFromString(html, 'text/html');
 
       // Swap <main>
@@ -1174,6 +1203,9 @@
         _bookingMonthEvents = {};
         _bookingDaySlots = null;
         _bookingOwnBookings = null;
+        _teachersCache = null;
+        _bookingCalendarSeq++;
+        _bookingSlotsSeq++;
       }
       if (doc.body.classList.contains('page-schedule')) {
         _scheduleData = null;
@@ -1183,6 +1215,7 @@
       }
       if (doc.body.classList.contains('page-teachers')) {
         _activeFilter = 'all';
+        _teachersCache = null;
       }
 
       // Re-init shared utilities + page
@@ -1196,19 +1229,19 @@
         return;
       }
 
-      if      (bc.contains('page-home'))     initHome();
-      else if (bc.contains('page-schedule')) initSchedule();
-      else if (bc.contains('page-booking'))  initBooking();
-      else if (bc.contains('page-teachers')) initTeachers();
-      else if (bc.contains('page-login'))    initLogin();
-      else if (bc.contains('page-register')) initRegister();
-      else if (bc.contains('page-profile'))  initProfile();
-      else if (bc.contains('page-teacher'))  initTeacher();
-      else if (bc.contains('page-admin'))    initAdmin();
+      if      (bc.contains('page-home'))     await initHome();
+      else if (bc.contains('page-schedule')) await initSchedule();
+      else if (bc.contains('page-booking'))  await initBooking();
+      else if (bc.contains('page-teachers')) await initTeachers();
+      else if (bc.contains('page-login'))    await initLogin();
+      else if (bc.contains('page-register')) await initRegister();
+      else if (bc.contains('page-profile'))  await initProfile();
+      else if (bc.contains('page-teacher'))  await initTeacher();
+      else if (bc.contains('page-admin'))    await initAdmin();
 
     } catch (_) {
       // Fallback: hard navigation
-      window.location.href = href;
+      if (navId === _navSeq) window.location.href = href;
     }
   }
 
@@ -1223,6 +1256,17 @@
     _bookingOwnBookings = null;
     _selectedDay = null;
     _selectedSlotIndex = null;
+    _bookingTeacher = null;
+    _teachersCache = null;
+    _bookingCalendarSeq++;
+    _bookingSlotsSeq++;
+
+    const calendarRoot = $('[data-render="booking-calendar"]');
+    const slotsRoot = $('[data-render="booking-slots"]');
+    const teacherRoot = $('[data-render="booking-teacher"]');
+    if (calendarRoot) calendarRoot.innerHTML = `<p class="empty-state">Загружаем календарь...</p>`;
+    if (slotsRoot) slotsRoot.innerHTML = `<p class="empty-state">Выберите дату, и мы покажем доступное время</p>`;
+    if (teacherRoot) teacherRoot.innerHTML = `<p class="empty-state">Загружаем преподавателя...</p>`;
 
     renderBookingHero();
     renderBookingGroup();
@@ -2111,8 +2155,7 @@
           a.textContent.trim();
         if (label !== 'Профиль') return;
         e.preventDefault();
-        if (API.getToken()) window.location.href = 'profile.html';
-        else                window.location.href = 'login.html';
+        navigateTo(API.getToken() ? 'profile.html' : 'login.html');
       });
 
       // SPA: browser back / forward

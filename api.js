@@ -57,6 +57,7 @@
         method,
         headers: { Accept: 'application/json' },
       };
+      if (method === 'GET') opts.cache = 'no-store';
       const tok = this.getToken();
       if (tok) opts.headers['Authorization'] = `Bearer ${tok}`;
       if (body !== undefined) {
