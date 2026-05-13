@@ -93,7 +93,7 @@ async function seedSlots(teacher_id, times, capacity = 1) {
     await upsertUser({ id: IDS.teacher3, role: 'teacher', name: 'Устаз Ахмад',      email: 'teacher3@example.com' });
     await upsertUser({ id: IDS.teacher4, role: 'teacher', name: 'Устаз Юсуф',       email: 'teacher4@example.com' });
     await upsertUser({ id: IDS.student1, role: 'student', name: 'Ахмад',            email: 'student1@example.com' });
-    await upsertUser({ id: IDS.student2, role: 'student', name: 'Айша',             email: 'student2@example.com' });
+    await upsertUser({ id: IDS.student2, role: 'student', name: 'Умар',             email: 'student2@example.com' });
     await upsertUser({ id: IDS.student3, role: 'student', name: 'Ибрагим',          email: 'student3@example.com' });
 
     console.log('[seed] teachers …');
@@ -176,7 +176,7 @@ async function seedSlots(teacher_id, times, capacity = 1) {
       `INSERT INTO bookings
          (student_id, teacher_id, student_name, teacher_name, lesson_date, time_slot,
           status, discipline_name, is_public)
-       SELECT $1, $2, 'Айша', 'Устаз Ахмад', $3::date, '11:00'::time,
+       SELECT $1, $2, 'Умар', 'Устаз Ахмад', $3::date, '11:00'::time,
               'pending', 'Таджвид', FALSE
        WHERE NOT EXISTS (
          SELECT 1 FROM bookings
@@ -196,7 +196,7 @@ async function seedSlots(teacher_id, times, capacity = 1) {
     );
     await query(
       `INSERT INTO reviews (teacher_id, student_id, student_name, rating, comment)
-       SELECT $1, $2, 'Айша', 5, 'Очень внимательный преподаватель, занятия проходят на высоком уровне.'
+       SELECT $1, $2, 'Умар', 5, 'Очень внимательный преподаватель, занятия проходят на высоком уровне.'
        WHERE NOT EXISTS (
          SELECT 1 FROM reviews WHERE teacher_id = $1 AND student_id = $2
        )`,
@@ -235,8 +235,8 @@ async function seedSlots(teacher_id, times, capacity = 1) {
       { sid: IDS.student1, tid: IDS.teacher1, sn: 'Ахмад',  tn: 'Мухаммад Идрисов', day: -3, time: '10:30', disc: 'Таджвид',     attended: true  },
       { sid: IDS.student1, tid: IDS.teacher1, sn: 'Ахмад',  tn: 'Мухаммад Идрисов', day: -10, time: '10:30', disc: 'Таджвид',    attended: true  },
       { sid: IDS.student1, tid: IDS.teacher1, sn: 'Ахмад',  tn: 'Мухаммад Идрисов', day: -17, time: '10:30', disc: 'Таджвид',    attended: false },
-      { sid: IDS.student2, tid: IDS.teacher3, sn: 'Айша',   tn: 'Устаз Ахмад',      day: -2, time: '11:00', disc: 'Таджвид',     attended: true  },
-      { sid: IDS.student2, tid: IDS.teacher3, sn: 'Айша',   tn: 'Устаз Ахмад',      day: -9, time: '11:00', disc: 'Хифз',        attended: true  },
+      { sid: IDS.student2, tid: IDS.teacher3, sn: 'Умар',   tn: 'Устаз Ахмад',      day: -2, time: '11:00', disc: 'Таджвид',     attended: true  },
+      { sid: IDS.student2, tid: IDS.teacher3, sn: 'Умар',   tn: 'Устаз Ахмад',      day: -9, time: '11:00', disc: 'Хифз',        attended: true  },
       { sid: IDS.student3, tid: IDS.teacher4, sn: 'Ибрагим',tn: 'Устаз Юсуф',       day: -1, time: '15:00', disc: 'Таджвид', attended: true  },
       { sid: IDS.student3, tid: IDS.teacher4, sn: 'Ибрагим',tn: 'Устаз Юсуф',       day: -8, time: '15:00', disc: 'Таджвид', attended: false },
       { sid: IDS.student3, tid: IDS.teacher4, sn: 'Ибрагим',tn: 'Устаз Юсуф',       day: -15, time: '15:00', disc: 'Таджвид',attended: true  },
