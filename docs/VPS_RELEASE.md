@@ -127,7 +127,7 @@ CURRENT_USER_ID=
 cp /var/www/quran-web/deploy/frontend/_config.vps.example.js /var/www/quran-web/_config.js
 ```
 
-Это локальная настройка сервера. В репозитории `_config.js` может временно смотреть на Render, чтобы текущий Netlify не сломался до полного переезда.
+Это локальная настройка сервера. В официальном релизе `_config.js` должен использовать тот же домен и значение `window.__API_BASE__ = '/api';`.
 
 ## 7. Миграции и стартовые данные
 
@@ -170,7 +170,7 @@ nano /etc/nginx/sites-available/quran-web
 Замените:
 
 ```nginx
-server_name hifz-center.site www.hifz-center.site;
+server_name hifz-center.ru www.hifz-center.ru;
 ```
 
 на свой домен.

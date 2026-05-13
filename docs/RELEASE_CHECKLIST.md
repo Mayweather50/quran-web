@@ -29,7 +29,7 @@ window.__API_BASE__ = '/api';
 ```
 
 - `index.html`, `booking.html`, `schedule.html`, `teachers.html`, `profile.html`, `admin.html` открываются через домен.
-- В DevTools Network нет запросов к `localhost`, Netlify или Render после полного переезда.
+- В DevTools Network нет запросов к `localhost` или старым внешним хостингам после полного переезда.
 
 ## Nginx и домен
 

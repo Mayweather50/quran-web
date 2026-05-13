@@ -5,7 +5,7 @@ server {
     listen 80;
     listen [::]:80;
 
-    server_name hifz-center.site www.hifz-center.site;
+    server_name hifz-center.ru www.hifz-center.ru;
     root /var/www/quran-web;
     index index.html;
 

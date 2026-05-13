@@ -14,8 +14,8 @@
   const USER_KEY  = 'authUser';
 
   // The API base URL is configurable so the same frontend can be
-  // deployed to Netlify (or any static host) and pointed at a backend
-  // running anywhere. Resolution order:
+  // served from the VPS and proxy requests to the backend through Nginx.
+  // Resolution order:
   //   1. window.__API_BASE__   (set by an inline script before api.js)
   //   2. <meta name="api-base" content="…">
   //   3. http://localhost:3001/api  (sensible local-dev default)

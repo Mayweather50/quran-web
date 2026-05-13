@@ -148,7 +148,7 @@ node scripts/set-user-password.js admin@quran.com admin12345
 
 ## ☁️ Деплой
 
-Frontend можно хостить на GitHub Pages или другом статическом хостинге. Express + PostgreSQL туда не зальются: backend и база нужны отдельно или на своём VPS.
+Официальный релиз рассчитан на один VPS: Nginx отдаёт frontend, проксирует `/api` в Express, PostgreSQL работает на том же сервере.
 
 Для официального релиза на одном VPS используйте готовую инструкцию:
 
@@ -157,20 +157,19 @@ Frontend можно хостить на GitHub Pages или другом ста�
 * `backend/.env.production.example` — шаблон production-переменных.
 * `npm run preflight` в папке `backend/` — автоматическая проверка env, БД, таблиц и индекса бронирований.
 
-1. Задеплойте папку `backend/` на VPS или любой хостинг с поддержкой Node.js + PostgreSQL.
-   - Установите переменные окружения: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `FRONTEND_ORIGIN=https://hifz-center.site,https://www.hifz-center.site`.
+1. Разверните проект на VPS с Node.js, PostgreSQL и Nginx.
+   - Установите переменные окружения: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `FRONTEND_ORIGIN=https://hifz-center.ru,https://www.hifz-center.ru`.
    - Запустите `npm run migrate` и `npm run seed` (большинство хостингов дают одноразовый shell или job hooks).
-2. Во frontend-файле `_config.js` укажите адрес backend API:
+2. Во frontend-файле `_config.js` укажите адрес backend API через тот же домен:
    ```
-   window.__API_BASE__ = 'https://your-api-domain.example/api';
+   window.__API_BASE__ = '/api';
    ```
-3. Для GitHub Pages в репозитории уже есть `CNAME` и `.nojekyll`.
+3. Настройте Nginx как reverse proxy для `/api` и выпустите SSL-сертификат для домена.
 
 ### Как это устроено
 
 | Файл | Роль |
 |---|---|
-| `netlify.toml` | старый вариант деплоя на Netlify, можно не использовать при GitHub Pages/VPS |
 | `_config.js` | содержит `window.__API_BASE__ = '...'` |
 | `api.js` | Читает `window.__API_BASE__` или `<meta name="api-base">`, иначе по умолчанию `http://localhost:3001/api` |
 | `script.js` | Загружает возрастные группы, уровни, преподавателей, цитаты, слоты и расписание через API |
