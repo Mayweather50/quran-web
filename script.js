@@ -2135,6 +2135,15 @@
         );
       });
 
+      // Logout buttons can be rendered after SPA navigation, so handle them
+      // through one delegated listener.
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-logout], #logoutBtn, #teacherLogoutBtn');
+        if (!btn) return;
+        e.preventDefault();
+        if (confirm('Выйти из аккаунта?')) logout();
+      });
+
       // SPA: intercept all internal link clicks on the whole document
       document.addEventListener('click', (e) => {
         const a = e.target.closest('a[href]');
@@ -3095,7 +3104,7 @@
             ${me.role === 'admin' ? `<a href="admin.html">Открыть админ-панель</a>` : ''}
           </div>
           <div class="panel-actions">
-            <button class="btn btn--primary profile-logout-btn" id="logoutBtn">Выйти из аккаунта</button>
+            <button class="btn btn--primary profile-logout-btn" type="button" id="logoutBtn" data-logout>Выйти из аккаунта</button>
           </div>
         </section>
       </div>`;
@@ -3164,9 +3173,6 @@
       }
     });
 
-    $('#logoutBtn')?.addEventListener('click', () => {
-      if (confirm('Выйти из аккаунта?')) logout();
-    });
   }
 
   async function initProfile() {
@@ -5257,11 +5263,6 @@
     if (document.body.classList.contains('page-teacher'))  initTeacher();
     if (document.body.classList.contains('page-profile'))  initProfile();
     if (document.body.classList.contains('page-admin'))    initAdmin();
-
-    // Wire the dedicated logout icon-btn used on teacher.html.
-    document.getElementById('teacherLogoutBtn')?.addEventListener('click', () => {
-      if (confirm('Выйти из аккаунта?')) logout();
-    });
 
     verifyAuth();
   }
