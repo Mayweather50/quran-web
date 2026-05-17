@@ -3046,6 +3046,7 @@
       : `<span class="profile-photo__initial">${escapeHTML(initial)}</span>`;
     const activeBookings = profileBookingsActive(bookings);
     const progressMeta = profileProgressMeta(progress, bookings);
+    const showLearningStats = me.role === 'student';
     const subtitle = me.role === 'student'
       ? 'Стремлюсь к знанию и довольству Аллаха'
       : 'Управление профилем и учебным процессом';
@@ -3055,7 +3056,6 @@
       profileMenuRow('clock', 'Расписание', 'schedule.html'),
       me.role === 'teacher' ? profileMenuRow('quran', 'Кабинет преподавателя', 'teacher.html') : '',
       me.role === 'admin' ? profileMenuRow('sliders', 'Админ-панель', 'admin.html') : '',
-      profileMenuRow('bell', 'Безопасность', '#profile-security'),
       profileMenuRow('info', 'Политика конфиденциальности', 'privacy.html'),
     ].filter(Boolean).join('');
 
@@ -3086,11 +3086,11 @@
               <p class="panel-msg" id="photoMsg"></p>
             </div>
           </div>
-          <div class="profile-stats">
+          ${showLearningStats ? `<div class="profile-stats">
             ${profileMetric('quran', progressMeta.completed, 'уроков завершено')}
             ${profileMetric('calIcon', activeBookings.length, 'активных записей')}
             ${profileMetric('route', `${progressMeta.percent}%`, 'общий прогресс')}
-          </div>
+          </div>` : ''}
         </section>
 
         ${me.role === 'student' ? `
@@ -3147,28 +3147,6 @@
 
         ${me.role === 'student' ? renderProfileBookingsCard(bookings, bookingsError) : ''}
 
-        <section class="profile-section-card" id="profile-security">
-          <div class="profile-section-head">
-            <h2>Безопасность</h2>
-          </div>
-          <div class="panel-row">
-            <span class="panel-label">Текущий пароль</span>
-            <input class="panel-input" id="currentPwd" type="password" autocomplete="current-password" />
-          </div>
-          <div class="panel-row">
-            <span class="panel-label">Новый пароль</span>
-            <input class="panel-input" id="newPwd" type="password" autocomplete="new-password" minlength="6" />
-          </div>
-          <div class="panel-row">
-            <span class="panel-label">Повтор</span>
-            <input class="panel-input" id="newPwd2" type="password" autocomplete="new-password" minlength="6" />
-          </div>
-          <div class="panel-actions">
-            <button class="btn btn--primary" id="savePwdBtn">Сменить пароль</button>
-          </div>
-          <p class="panel-msg" id="pwdMsg"></p>
-        </section>
-
         <section class="profile-section-card profile-account-card">
           <div class="profile-section-head">
             <h2>Аккаунт</h2>
@@ -3177,6 +3155,28 @@
             ${me.role === 'teacher' ? `<a href="teacher.html">Кабинет преподавателя</a>` : ''}
             ${me.role === 'admin' ? `<a href="admin.html">Открыть админ-панель</a>` : ''}
           </div>
+          <details class="profile-security-details" id="profile-security">
+            <summary>
+              <span>Сменить пароль</span>
+              <small>Настройки безопасности</small>
+            </summary>
+            <div class="panel-row">
+              <span class="panel-label">Текущий пароль</span>
+              <input class="panel-input" id="currentPwd" type="password" autocomplete="current-password" />
+            </div>
+            <div class="panel-row">
+              <span class="panel-label">Новый пароль</span>
+              <input class="panel-input" id="newPwd" type="password" autocomplete="new-password" minlength="6" />
+            </div>
+            <div class="panel-row">
+              <span class="panel-label">Повтор</span>
+              <input class="panel-input" id="newPwd2" type="password" autocomplete="new-password" minlength="6" />
+            </div>
+            <div class="panel-actions">
+              <button class="btn btn--primary" id="savePwdBtn">Сменить пароль</button>
+            </div>
+            <p class="panel-msg" id="pwdMsg"></p>
+          </details>
           <div class="panel-actions">
             <button class="btn btn--primary profile-logout-btn" type="button" id="logoutBtn" data-logout>Выйти из аккаунта</button>
           </div>
@@ -4323,7 +4323,7 @@
   }
 
   // ───────────────── USERS table (legacy view, all roles) ─────────
-  async function renderAdminUsersPage() {
+  async function renderAdminUsersPageLegacy() {
     const root = $('[data-render="admin-page"]');
     if (!root) return;
     root.innerHTML = renderAdminShell('users', `<section class="adm-card adm-card--full"><div data-render="adm-sub-body"><p class="empty-state">Загрузка…</p></div></section>`);
@@ -4386,31 +4386,31 @@
         </table>
       </div>`}
     `;
-    bindAdminUserActions(body);
+    bindAdminUserActionsLegacy(body);
   }
 
-  function bindAdminUserActions(root) {
+  function bindAdminUserActionsLegacy(root) {
     let searchTimer = null;
     root.querySelector('[data-action="user-search"]')?.addEventListener('input', (e) => {
       clearTimeout(searchTimer);
       const v = e.target.value;
-      searchTimer = setTimeout(() => { _adminUserFilter.q = v; renderAdminUsersPage(); }, 250);
+      searchTimer = setTimeout(() => { _adminUserFilter.q = v; renderAdminUsersPageLegacy(); }, 250);
     });
     root.querySelector('[data-action="user-role-filter"]')?.addEventListener('change', (e) => {
-      _adminUserFilter.role = e.target.value; renderAdminUsersPage();
+      _adminUserFilter.role = e.target.value; renderAdminUsersPageLegacy();
     });
-    root.querySelector('[data-action="user-create"]')?.addEventListener('click', adminCreateUser);
+    root.querySelector('[data-action="user-create"]')?.addEventListener('click', adminCreateUserLegacy);
 
     root.querySelectorAll('tr[data-id]').forEach((tr) => {
       const id = tr.dataset.id;
       const u = _adminUsers.find((x) => x.id === id);
       tr.querySelector('select[data-action="role"]')?.addEventListener('change', async (e) => {
-        try { await API.patch(`/admin/users/${encodeURIComponent(id)}`, { role: e.target.value }); await renderAdminUsersPage(); }
-        catch (err) { alert(err.message); await renderAdminUsersPage(); }
+        try { await API.patch(`/admin/users/${encodeURIComponent(id)}`, { role: e.target.value }); await renderAdminUsersPageLegacy(); }
+        catch (err) { alert(err.message); await renderAdminUsersPageLegacy(); }
       });
       tr.querySelector('[data-action="toggle-active"]')?.addEventListener('click', async () => {
         if (!u) return;
-        try { await API.patch(`/admin/users/${encodeURIComponent(id)}`, { is_active: !u.is_active }); await renderAdminUsersPage(); }
+        try { await API.patch(`/admin/users/${encodeURIComponent(id)}`, { is_active: !u.is_active }); await renderAdminUsersPageLegacy(); }
         catch (err) { alert(err.message); }
       });
       tr.querySelector('[data-action="reset-password"]')?.addEventListener('click', async () => {
@@ -4422,13 +4422,13 @@
       });
       tr.querySelector('[data-action="delete-user"]')?.addEventListener('click', async () => {
         if (!confirm(`Удалить пользователя ${u.name} (${u.email})?\n\nЭто также удалит все связанные записи. Действие необратимо.`)) return;
-        try { await API.del(`/admin/users/${encodeURIComponent(id)}`); await renderAdminUsersPage(); }
+        try { await API.del(`/admin/users/${encodeURIComponent(id)}`); await renderAdminUsersPageLegacy(); }
         catch (err) { alert(err.message); }
       });
     });
   }
 
-  async function adminCreateUser() {
+  async function adminCreateUserLegacy() {
     const name = prompt('Имя нового пользователя:');
     if (!name) return;
     const email = prompt('Email:');
@@ -4437,8 +4437,258 @@
     if (!role) return;
     const password = prompt('Пароль (мин. 6 символов):');
     if (!password) return;
-    try { await API.post('/admin/users', { name, email, role, password }); await renderAdminUsersPage(); }
+    try { await API.post('/admin/users', { name, email, role, password }); await renderAdminUsersPageLegacy(); }
     catch (err) { alert(err.message); }
+  }
+
+  function adminRoleLabel(role) {
+    return ({ student: 'Ученик', teacher: 'Преподаватель', admin: 'Администратор' })[role] || role || 'Пользователь';
+  }
+
+  function adminUserMeta(u) {
+    const parts = [];
+    if (u.role === 'student') {
+      if (u.current_teacher) parts.push(`Преподаватель: ${u.current_teacher}`);
+      if (u.current_course) parts.push(`Курс: ${u.current_course}`);
+      if (u.group_name) parts.push(`Группа: ${u.group_name}`);
+    } else if (u.role === 'teacher') {
+      if (u.phone) parts.push(`Телефон: ${u.phone}`);
+      parts.push('Кабинет преподавателя');
+    } else if (u.role === 'admin') {
+      parts.push('Доступ к админ-панели');
+    }
+    return parts.join(' · ') || 'Данные подтягиваются из базы';
+  }
+
+  function renderAdminUserCard(u, currentUser) {
+    const isMe = currentUser?.id === u.id;
+    const created = joinedDate(String(u.created_at || '').slice(0, 10));
+    const statusText = u.is_active ? 'Активен' : 'Заблокирован';
+    const roleText = adminRoleLabel(u.role);
+    return `
+      <article class="adm-user-card" data-id="${escapeAttr(u.id)}">
+        <div class="adm-user-card__avatar">${initialsCircle(u.name, u.avatar_url)}</div>
+        <div class="adm-user-card__main">
+          <div class="adm-user-card__top">
+            <h3 class="adm-user-card__name">${escapeHTML(u.name || 'Без имени')}</h3>
+            ${isMe ? '<span class="admin-self-tag">это вы</span>' : ''}
+          </div>
+          <p class="adm-user-card__email">${escapeHTML(u.email || 'email не указан')}</p>
+          <p class="adm-user-card__meta">${escapeHTML(adminUserMeta(u))}</p>
+          <p class="adm-user-card__date">Создан: ${escapeHTML(created || '—')}</p>
+        </div>
+        <div class="adm-user-card__controls">
+          <span class="admin-flag admin-flag--${u.is_active ? 'on' : 'off'}">${statusText}</span>
+          <select data-action="role" aria-label="Роль пользователя" ${isMe ? 'disabled' : ''}>
+            <option value="student" ${u.role === 'student' ? 'selected' : ''}>Ученик</option>
+            <option value="teacher" ${u.role === 'teacher' ? 'selected' : ''}>Преподаватель</option>
+            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Администратор</option>
+          </select>
+          <small>${escapeHTML(roleText)}</small>
+        </div>
+        <div class="adm-user-card__actions">
+          <button class="admin-btn ${u.is_active ? 'admin-btn--warn' : ''}" type="button" data-action="toggle-active" ${isMe ? 'disabled' : ''}>
+            ${u.is_active ? 'Заблокировать' : 'Разблокировать'}
+          </button>
+          <button class="admin-btn" type="button" data-action="reset-password">Пароль</button>
+          <button class="admin-btn admin-btn--danger" type="button" data-action="delete-user" ${isMe ? 'disabled' : ''}>Удалить</button>
+        </div>
+      </article>
+    `;
+  }
+
+  async function renderAdminUsersPage() {
+    const root = $('[data-render="admin-page"]');
+    if (!root) return;
+    root.innerHTML = renderAdminShell('users', `<div data-render="adm-sub-body"><p class="empty-state">Загрузка…</p></div>`);
+    bindShellNav(root);
+    const body = root.querySelector('[data-render="adm-sub-body"]');
+    try {
+      const params = new URLSearchParams();
+      if (_adminUserFilter.q) params.set('q', _adminUserFilter.q);
+      if (_adminUserFilter.role) params.set('role', _adminUserFilter.role);
+      const qs = params.toString() ? `?${params}` : '';
+      _adminUsers = await API.get(`/admin/users${qs}`);
+    } catch (err) {
+      body.innerHTML = `<p class="empty-state">Ошибка: ${escapeHTML(err.message)}</p>`;
+      return;
+    }
+
+    const cur = API.getUser();
+    const counts = {
+      total: _adminUsers.length,
+      students: _adminUsers.filter((u) => u.role === 'student').length,
+      teachers: _adminUsers.filter((u) => u.role === 'teacher').length,
+      admins: _adminUsers.filter((u) => u.role === 'admin').length,
+    };
+
+    body.innerHTML = `
+      <section class="adm-users-summary">
+        ${metricCard('users', 'Всего', counts.total, 'пользователей')}
+        ${metricCard('users', 'Ученики', counts.students, 'роль student')}
+        ${metricCard('teachers', 'Преподаватели', counts.teachers, 'роль teacher')}
+        ${metricCard('user-plus', 'Админы', counts.admins, 'роль admin')}
+      </section>
+
+      <section class="adm-card adm-card--full adm-users-panel">
+        <div class="adm-card__head adm-card__head--stack">
+          <div>
+            <h2 class="adm-card__title">Пользователи</h2>
+            <p class="adm-card__sub">Управление ролями, статусами и доступом. Все данные берутся из базы.</p>
+          </div>
+          <button class="admin-btn admin-btn--primary" type="button" data-action="user-create">Добавить пользователя</button>
+        </div>
+        <div class="adm-card__body">
+          <form class="adm-user-form" data-user-form hidden>
+            <label>
+              <span>Имя</span>
+              <input name="name" type="text" autocomplete="name" required minlength="2" />
+            </label>
+            <label>
+              <span>Email</span>
+              <input name="email" type="email" autocomplete="email" required />
+            </label>
+            <label>
+              <span>Роль</span>
+              <select name="role">
+                <option value="student">Ученик</option>
+                <option value="teacher">Преподаватель</option>
+                <option value="admin">Администратор</option>
+              </select>
+            </label>
+            <label>
+              <span>Пароль</span>
+              <input name="password" type="password" autocomplete="new-password" required minlength="6" />
+            </label>
+            <div class="adm-user-form__actions">
+              <button class="admin-btn" type="button" data-action="user-create-cancel">Отмена</button>
+              <button class="admin-btn admin-btn--primary" type="submit">Создать</button>
+            </div>
+          </form>
+
+          <div class="admin-toolbar admin-toolbar--users">
+            <input type="search" class="admin-search" placeholder="Поиск по имени или email…"
+                   value="${escapeAttr(_adminUserFilter.q || '')}" data-action="user-search" />
+            <select class="admin-filter" data-action="user-role-filter">
+              <option value="" ${_adminUserFilter.role === '' ? 'selected' : ''}>Все роли</option>
+              <option value="student" ${_adminUserFilter.role === 'student' ? 'selected' : ''}>Ученики</option>
+              <option value="teacher" ${_adminUserFilter.role === 'teacher' ? 'selected' : ''}>Преподаватели</option>
+              <option value="admin" ${_adminUserFilter.role === 'admin' ? 'selected' : ''}>Админы</option>
+            </select>
+          </div>
+
+          ${_adminUsers.length === 0
+            ? `<p class="empty-state">Пользователей не найдено</p>`
+            : `<div class="adm-user-list">${_adminUsers.map((u) => renderAdminUserCard(u, cur)).join('')}</div>`}
+        </div>
+      </section>
+    `;
+
+    bindAdminUserActions(body);
+  }
+
+  function bindAdminUserActions(root) {
+    let searchTimer = null;
+    root.querySelector('[data-action="user-search"]')?.addEventListener('input', (e) => {
+      clearTimeout(searchTimer);
+      const v = e.target.value;
+      searchTimer = setTimeout(() => { _adminUserFilter.q = v; renderAdminUsersPage(); }, 250);
+    });
+    root.querySelector('[data-action="user-role-filter"]')?.addEventListener('change', (e) => {
+      _adminUserFilter.role = e.target.value;
+      renderAdminUsersPage();
+    });
+    root.querySelector('[data-action="user-create"]')?.addEventListener('click', () => adminCreateUser(root));
+    root.querySelector('[data-action="user-create-cancel"]')?.addEventListener('click', () => {
+      const form = root.querySelector('[data-user-form]');
+      if (!form) return;
+      form.reset();
+      form.hidden = true;
+    });
+    root.querySelector('[data-user-form]')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await adminCreateUserFromForm(e.currentTarget);
+    });
+
+    root.querySelectorAll('.adm-user-card[data-id], tr[data-id]').forEach((row) => {
+      const id = row.dataset.id;
+      const u = _adminUsers.find((x) => x.id === id);
+      row.querySelector('select[data-action="role"]')?.addEventListener('change', async (e) => {
+        const prev = u?.role || 'student';
+        try {
+          await API.patch(`/admin/users/${encodeURIComponent(id)}`, { role: e.target.value });
+          await renderAdminUsersPage();
+        } catch (err) {
+          e.target.value = prev;
+          alert(err.message);
+          await renderAdminUsersPage();
+        }
+      });
+      row.querySelector('[data-action="toggle-active"]')?.addEventListener('click', async () => {
+        if (!u) return;
+        try {
+          await API.patch(`/admin/users/${encodeURIComponent(id)}`, { is_active: !u.is_active });
+          await renderAdminUsersPage();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+      row.querySelector('[data-action="reset-password"]')?.addEventListener('click', async () => {
+        if (!u) return;
+        const pw = prompt(`Введите новый пароль для ${u.email}:`, '');
+        if (pw === null) return;
+        if (pw.length < 6) return alert('Пароль должен быть не короче 6 символов');
+        try {
+          await API.patch(`/admin/users/${encodeURIComponent(id)}`, { password: pw });
+          alert('Пароль обновлён');
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+      row.querySelector('[data-action="delete-user"]')?.addEventListener('click', async () => {
+        if (!u) return;
+        if (!confirm(`Удалить пользователя ${u.name} (${u.email})?\n\nЭто также удалит связанные данные. Действие необратимо.`)) return;
+        try {
+          await API.del(`/admin/users/${encodeURIComponent(id)}`);
+          await renderAdminUsersPage();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    });
+  }
+
+  function adminCreateUser(root = document) {
+    const form = root.querySelector?.('[data-user-form]') || document.querySelector('[data-user-form]');
+    if (!form) return;
+    form.hidden = false;
+    form.querySelector('[name="name"]')?.focus();
+    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  async function adminCreateUserFromForm(form) {
+    const data = new FormData(form);
+    const name = String(data.get('name') || '').trim();
+    const email = String(data.get('email') || '').trim();
+    const role = String(data.get('role') || 'student').trim();
+    const password = String(data.get('password') || '');
+    if (name.length < 2) return alert('Введите имя пользователя');
+    if (!email) return alert('Введите email');
+    if (!['student', 'teacher', 'admin'].includes(role)) return alert('Выберите роль');
+    if (password.length < 6) return alert('Пароль должен быть не короче 6 символов');
+
+    const submit = form.querySelector('button[type="submit"]');
+    if (submit) submit.disabled = true;
+    try {
+      await API.post('/admin/users', { name, email, role, password });
+      form.reset();
+      form.hidden = true;
+      await renderAdminUsersPage();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      if (submit) submit.disabled = false;
+    }
   }
 
   // ───────────────── BOOKINGS table ───────────────────────────────
@@ -4851,6 +5101,7 @@
   async function renderAdminGroupsPage() {
     const root = $('[data-render="admin-page"]');
     if (!root) return;
+    if (_groupsFilter === 'hifz') _groupsFilter = 'all';
     root.innerHTML = renderAdminShell('groups',
       `<div data-render="adm-sub-body"><p class="empty-state">Загрузка групп…</p></div>`);
     bindShellNav(root);
@@ -4876,11 +5127,9 @@
 
     const filtered = groups.filter((g) => {
       const age = groupAge(g).toLowerCase();
-      const level = groupLevel(g).toLowerCase();
       if (_groupsFilter === 'kids')   return /(дет|4-6|7-10|6-12)/.test(age);
       if (_groupsFilter === 'teens')  return /(подрост|молод|11-14|11-15|13-17|15-17|15-20|18-25)/.test(age);
       if (_groupsFilter === 'adults') return /(взрос|стар|20\+|26|45)/.test(age);
-      if (_groupsFilter === 'hifz')   return /(хифз|hifz|продвин)/.test(level);
       return true;
     });
 
@@ -4897,7 +5146,6 @@
                 ['kids',   'Дети'],
                 ['teens',  'Подростки'],
                 ['adults', 'Взрослые'],
-                ['hifz',   'Хифз'],
               ].map(([v, lbl]) => `
                 <button class="adm-chip ${_groupsFilter === v ? 'is-active' : ''}" data-chip="${v}">${lbl}</button>
               `).join('')}
