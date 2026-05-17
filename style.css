@@ -2205,7 +2205,12 @@ svg { width: 100%; height: 100%; }
   body { padding-bottom: var(--tabs-h); }
 
   .header-inner { justify-content: center; }
-  .site-header { background: rgba(242,235,224,0.85); backdrop-filter: blur(14px); }
+  .site-header {
+    position: relative;
+    top: auto;
+    background: rgba(242,235,224,0.85);
+    backdrop-filter: blur(14px);
+  }
   .site-header.scrolled { background: rgba(242,235,224,0.95); }
 
   .page-home .site-header,
@@ -2435,14 +2440,15 @@ svg { width: 100%; height: 100%; }
   .page-home .progress-percent { font-size: 18px; }
   .page-home .progress-percent small { font-size: 10px; }
 
-  /* 4 cards in a row */
-  .page-home .cards-grid--5 {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 7px;
+  /* Keep compact learning cards in 3 columns on phones. */
+  .page-home .cards-grid--5,
+  .page-home .cards-grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
   }
   .page-home .age-card,
   .page-home .level-card {
-    padding: 8px 6px 10px;
+    padding: 8px 5px 10px;
     border-radius: 12px;
     min-width: 0;
   }
@@ -2455,7 +2461,7 @@ svg { width: 100%; height: 100%; }
   }
   .page-home .age-card-title,
   .page-home .level-card-title {
-    font-size: 12px;
+    font-size: 11.5px;
     line-height: 1.15;
     font-weight: 600;
   }
@@ -2563,14 +2569,27 @@ svg { width: 100%; height: 100%; }
 }
 
 @media (max-width: 720px) {
-  .cards-grid--5 { grid-template-columns: repeat(2, 1fr); gap: 14px; }
-  .cards-grid--3 { grid-template-columns: repeat(2, 1fr); gap: 14px; }
-  .age-card, .level-card { padding: 14px 12px 16px; }
-  .age-card-title, .level-card-title { font-size: 16px; }
+  .cards-grid--5,
+  .cards-grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .age-card, .level-card {
+    padding: 8px 5px 10px;
+    border-radius: 12px;
+  }
+  .age-card-image, .level-card-image {
+    border-radius: 9px;
+    margin-bottom: 6px;
+  }
+  .age-card-title, .level-card-title {
+    font-size: 11.5px;
+    line-height: 1.15;
+  }
   .cards-grid--3 .age-card,
-  .cards-grid--3 .level-card { padding: 16px 14px 18px; }
+  .cards-grid--3 .level-card { padding: 8px 5px 10px; }
   .cards-grid--3 .age-card-title,
-  .cards-grid--3 .level-card-title { font-size: 17px; }
+  .cards-grid--3 .level-card-title { font-size: 11.5px; }
 
   .greeting { font-size: 28px; }
   .reflection-card { padding: 12px 14px 12px 12px; gap: 12px; max-width: 100%; }
@@ -5074,6 +5093,22 @@ body.no-scroll { overflow: hidden; }
   .adm-hero__inner  { padding: 24px 22px 20px; }
   .adm-hero__name   { font-size: 32px; }
   .adm-hero__bg     { opacity: 0.18; }
+  .adm-quick__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .adm-quick__tile {
+    min-height: 86px;
+    padding: 12px 7px;
+  }
+  .adm-quick__icon {
+    width: 26px;
+    height: 26px;
+  }
+  .adm-quick__label {
+    font-size: 12px;
+    line-height: 1.15;
+  }
   .adm-screen-top {
     min-height: 150px;
     padding-bottom: 58px;
@@ -5132,7 +5167,7 @@ body.no-scroll { overflow: hidden; }
   }
   .adm-quick__grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
   }
   .adm-screen-top {
     grid-template-columns: auto 1fr auto;
@@ -5154,16 +5189,16 @@ body.no-scroll { overflow: hidden; }
     left: 18%;
   }
   .adm-quick__tile {
-    min-height: 92px;
-    padding: 14px 8px;
+    min-height: 80px;
+    padding: 10px 6px;
   }
   .adm-quick__icon {
-    width: 30px;
-    height: 30px;
+    width: 24px;
+    height: 24px;
   }
   .adm-quick__label {
-    font-size: 12.5px;
-    line-height: 1.2;
+    font-size: 11.5px;
+    line-height: 1.15;
   }
   .adm-week-summary {
     grid-template-columns: 1fr;
