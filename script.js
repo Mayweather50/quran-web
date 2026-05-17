@@ -3389,7 +3389,9 @@
       });
     });
     root.querySelector('[data-action="screen-search"]')?.addEventListener('click', () => {
-      const input = searchSelector ? root.querySelector(searchSelector) : null;
+      const input = searchSelector
+        ? root.querySelector(searchSelector)
+        : root.querySelector('.adm-search-row__input, input[type="search"]');
       if (input) input.focus();
     });
     root.querySelector('[data-action="screen-filter"]')?.addEventListener('click', () => {
@@ -3803,9 +3805,24 @@
   // tables stay as straightforward admin tables.
 
   // ─── shared shell with chip-tabs at the top ─────────────────────
+  const ADMIN_SUBPAGE_TITLES = {
+    students: 'Ученики',
+    catalog: 'Преподаватели',
+    groups: 'Группы',
+    attendance: 'Посещаемость',
+    chats: 'Чаты',
+    reports: 'Отчёты',
+    users: 'Пользователи',
+    bookings: 'Записи',
+    teachers: 'Преподаватели',
+  };
+  const ADMIN_PAGES_WITH_INNER_TOP = new Set(['students', 'groups', 'chats']);
+
   function renderAdminShell(activeTab, body) {
+    const showScreenTop = activeTab !== 'dashboard' && !ADMIN_PAGES_WITH_INNER_TOP.has(activeTab);
     return `
       <div class="adm-page">
+        ${showScreenTop ? renderAdminScreenTop(ADMIN_SUBPAGE_TITLES[activeTab] || 'Админ-панель', { bell: true }) : ''}
         ${body}
       </div>
     `;
@@ -3814,6 +3831,7 @@
     root.querySelectorAll('.adm-subnav [data-go]').forEach((btn) => {
       btn.addEventListener('click', () => switchAdminView(btn.dataset.go));
     });
+    bindAdminScreenTop(root);
   }
 
   // ─── Hero header used by Students and Catalog pages ─────────────
