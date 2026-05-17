@@ -5095,6 +5095,10 @@ body.no-scroll { overflow: hidden; }
 
 /* ───── MOBILE ───── */
 @media (max-width: 900px) {
+  .admin-app-header {
+    position: relative;
+    top: auto;
+  }
   .adm-metrics      { grid-template-columns: repeat(2, 1fr); }
   .adm-grid-2       { grid-template-columns: 1fr; }
   .adm-hero__inner  { padding: 24px 22px 20px; }
