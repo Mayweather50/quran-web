@@ -26,6 +26,14 @@ server {
         proxy_set_header Connection "";
     }
 
+    location = /index.html {
+        return 301 /$is_args$args;
+    }
+
+    location ~ ^/(booking|schedule|teachers|profile|login|register|teacher|admin|privacy)\.html$ {
+        return 301 /$1$is_args$args;
+    }
+
     # Static frontend pages. /booking and /booking.html both work.
     location / {
         try_files $uri $uri/ $uri.html /index.html;

@@ -645,6 +645,78 @@
   let _isPopNav = false;
   let _navSeq = 0;
 
+  const CLEAN_URLS_ENABLED = /^(https?:)$/.test(window.location.protocol);
+  const PAGE_TO_ROUTE = Object.freeze({
+    'index.html': '/',
+    'booking.html': '/booking',
+    'schedule.html': '/schedule',
+    'teachers.html': '/teachers',
+    'profile.html': '/profile',
+    'login.html': '/login',
+    'register.html': '/register',
+    'teacher.html': '/teacher',
+    'admin.html': '/admin',
+    'privacy.html': '/privacy',
+  });
+  const ROUTE_TO_PAGE = Object.freeze(Object.entries(PAGE_TO_ROUTE).reduce((acc, [page, route]) => {
+    acc[route] = page;
+    return acc;
+  }, {}));
+
+  function routeUrlFromHref(href) {
+    try {
+      const url = new URL(href || 'index.html', window.location.href);
+      if (CLEAN_URLS_ENABLED && url.origin !== window.location.origin) return null;
+      return url;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function cleanRoutePath(pathname) {
+    return (pathname || '/').replace(/\/+$/, '') || '/';
+  }
+
+  function pageNameFromHref(href) {
+    const url = routeUrlFromHref(href);
+    if (!url) return null;
+    const pathname = cleanRoutePath(url.pathname);
+    if (ROUTE_TO_PAGE[pathname]) return ROUTE_TO_PAGE[pathname];
+    const last = pathname.split('/').pop() || 'index.html';
+    return PAGE_TO_ROUTE[last] ? last : null;
+  }
+
+  function fetchHrefForRoute(href) {
+    const url = routeUrlFromHref(href);
+    if (!url) return href;
+    const page = pageNameFromHref(href);
+    if (!page) return href;
+    return `${page}${url.search || ''}${url.hash || ''}`;
+  }
+
+  function displayHrefForRoute(href) {
+    if (!CLEAN_URLS_ENABLED) return href;
+    const url = routeUrlFromHref(href);
+    if (!url) return href;
+    const page = pageNameFromHref(href);
+    const route = page && PAGE_TO_ROUTE[page];
+    if (!route) return href;
+    return `${route}${url.search || ''}${url.hash || ''}`;
+  }
+
+  function redirectTo(href) {
+    window.location.replace(displayHrefForRoute(href));
+  }
+
+  function normalizeCurrentRoute() {
+    if (!CLEAN_URLS_ENABLED) return;
+    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const clean = displayHrefForRoute(current);
+    if (clean && clean !== current) {
+      history.replaceState(history.state || {}, document.title, clean);
+    }
+  }
+
   // ---- API caches (cleared on full page reload) ----
   let _teachersCache = null;        // full list from /api/teachers
   let _bookingTeacher = null;       // teacher currently shown on booking page
@@ -1157,12 +1229,15 @@
   async function navigateTo(href) {
     if (!href || href === '#') return;
     const navId = ++_navSeq;
+    const fetchHref = fetchHrefForRoute(href);
+    const displayHref = displayHrefForRoute(href);
+    const stateHref = fetchHrefForRoute(displayHref);
 
     // Stop quote auto-rotation when leaving home
     if (_quoteTimer) { clearInterval(_quoteTimer); _quoteTimer = null; }
 
     try {
-      const res = await fetch(href, { cache: 'no-store', credentials: 'same-origin' });
+      const res = await fetch(fetchHref, { cache: 'no-store', credentials: 'same-origin' });
       if (!res.ok) throw new Error('fetch failed');
       const html = await res.text();
       if (navId !== _navSeq) return;
@@ -1181,14 +1256,14 @@
       if (newAct && curAct) curAct.innerHTML = newAct.innerHTML;
 
       // Sync active state in nav + tabs
-      const file = href.split('?')[0].split('/').pop() || 'index.html';
+      const file = pageNameFromHref(fetchHref) || 'index.html';
       $$('.main-nav .nav-link, .mobile-tabs .tab').forEach(el => {
-        const elFile = (el.getAttribute('href') || '').split('?')[0].split('/').pop() || 'index.html';
+        const elFile = pageNameFromHref(el.getAttribute('href') || '') || 'index.html';
         el.classList.toggle('active', elFile === file);
       });
 
       // Push history (but not on browser back/forward)
-      if (!_isPopNav) history.pushState({ href }, doc.title, href);
+      if (!_isPopNav) history.pushState({ href: stateHref }, doc.title, displayHref);
 
       // Scroll to top instantly
       window.scrollTo(0, 0);
@@ -1225,7 +1300,7 @@
       // Re-run auth guard: if logged-in user navigates to login/register
       // via SPA, send them to home. Same effect as on hard reload.
       if ((bc.contains('page-login') || bc.contains('page-register')) && API.getToken()) {
-        window.location.replace('index.html');
+        redirectTo('index.html');
         return;
       }
 
@@ -1241,7 +1316,7 @@
 
     } catch (_) {
       // Fallback: hard navigation
-      if (navId === _navSeq) window.location.href = href;
+      if (navId === _navSeq) window.location.href = displayHref;
     }
   }
 
@@ -1896,10 +1971,8 @@
   }
 
   function teacherChatLoginUrl() {
-    const current =
-      (window.location.pathname.split('/').pop() || 'teachers.html') +
-      window.location.search;
-    return `login.html?next=${encodeURIComponent(current)}`;
+    const current = fetchHrefForRoute(`${window.location.pathname}${window.location.search}`);
+    return displayHrefForRoute(`login.html?next=${encodeURIComponent(current)}`);
   }
 
   async function bindTeacherMessageActions(root) {
@@ -2149,7 +2222,9 @@
         const a = e.target.closest('a[href]');
         if (!a) return;
         const href = a.getAttribute('href');
-        if (!href || href === '#' || href.startsWith('#') || /^(https?:|\/\/)/.test(href)) return;
+        if (!href || href === '#' || href.startsWith('#') || /^(?:mailto:|tel:|javascript:)/i.test(href)) return;
+        const url = routeUrlFromHref(href);
+        if (!url || !pageNameFromHref(href)) return;
         e.preventDefault();
         navigateTo(href);
       });
@@ -2171,16 +2246,15 @@
       window.addEventListener('popstate', () => {
         _isPopNav = true;
         const href =
-          (window.location.pathname.split('/').pop() || 'index.html') +
-          window.location.search;
+          history.state?.href ||
+          fetchHrefForRoute(`${window.location.pathname}${window.location.search}${window.location.hash}`);
         navigateTo(href).finally(() => { _isPopNav = false; });
       });
 
       // Save initial history entry so popstate can navigate back to it
-      const initHref =
-        (window.location.pathname.split('/').pop() || 'index.html') +
-        window.location.search;
-      history.replaceState({ href: initHref }, document.title);
+      normalizeCurrentRoute();
+      const initHref = fetchHrefForRoute(`${window.location.pathname}${window.location.search}${window.location.hash}`);
+      history.replaceState({ href: initHref }, document.title, displayHrefForRoute(initHref));
     }
 
     // ── Per-navigation: update header scroll state ────────────
@@ -2226,7 +2300,7 @@
   // bounce a logged-in user to the home page.
   function authGuard() {
     if (isAuthPage() && API.getToken()) {
-      window.location.replace(safeNextTarget() || 'index.html');
+      redirectTo(safeNextTarget() || 'index.html');
       return false;
     }
     return true;
@@ -2234,7 +2308,7 @@
 
   function logout() {
     API.clearAuth();
-    window.location.replace('login.html');
+    redirectTo('login.html');
   }
   window.logout = logout; // accessible from console / future UI
 
@@ -2267,7 +2341,7 @@
   function safeNextTarget() {
     const next = getQueryParam('next');
     if (!next || /^(?:[a-z]+:)?\/\//i.test(next) || next.includes('\\')) return null;
-    const page = (next.split('?')[0] || 'index.html').split('/').pop();
+    const page = pageNameFromHref(next);
     const allowed = new Set([
       'index.html',
       'teachers.html',
@@ -2290,7 +2364,7 @@
       API.setUser(res.user);
       const next = safeNextTarget();
       const target = res.user?.role === 'teacher' ? 'teacher.html' : (next || 'index.html');
-      window.location.replace(target);
+      redirectTo(target);
     });
   }
 
@@ -2312,7 +2386,7 @@
       const res = await API.post('/auth/register', { name, email, password, privacyAccepted });
       API.setToken(res.token);
       API.setUser(res.user);
-      window.location.replace('index.html');
+      redirectTo('index.html');
     });
   }
 
