@@ -5,7 +5,7 @@
 'use strict';
 
 const router = require('express').Router();
-const { query } = require('../db');
+const { query, getClient } = require('../db');
 const {
   requireRole,
   hashPassword,
@@ -636,6 +636,46 @@ router.patch('/teachers/:id', async (req, res, next) => {
     res.json(upd.rows[0]);
   } catch (err) {
     next(err);
+  }
+});
+
+// DELETE /api/admin/teachers/:id - remove a teacher profile and its linked
+// teacher user account. Schedule slots/bookings cascade from teachers.
+router.delete('/teachers/:id', async (req, res, next) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    const found = await client.query(
+      'SELECT id, user_id FROM teachers WHERE id = $1 FOR UPDATE',
+      [req.params.id]
+    );
+    if (!found.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Teacher not found' });
+    }
+
+    const teacher = found.rows[0];
+    await client.query('DELETE FROM teachers WHERE id = $1', [teacher.id]);
+
+    let deletedUserId = null;
+    if (teacher.user_id) {
+      const deletedUser = await client.query(
+        `DELETE FROM users
+          WHERE id = $1 AND role = 'teacher'
+          RETURNING id`,
+        [teacher.user_id]
+      );
+      deletedUserId = deletedUser.rows[0]?.id || null;
+    }
+
+    await client.query('COMMIT');
+    res.json({ ok: true, id: teacher.id, deleted_user_id: deletedUserId });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    next(err);
+  } finally {
+    client.release();
   }
 });
 

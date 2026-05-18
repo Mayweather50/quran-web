@@ -3811,6 +3811,8 @@
       bell:     '<svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0v5l1.5 3h-15L6 13V8Z M10 19a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>',
       back:     '<svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
       clock:    '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 8v4l3 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+      lock:     '<svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8 10V7.8a4 4 0 0 1 8 0V10 M12 14v2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+      trash:    '<svg viewBox="0 0 24 24"><path d="M5 7h14M10 11v6M14 11v6M8 7l.8 13h6.4L16 7M9 7l1-3h4l1 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
       more:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="19" r="1.6" fill="currentColor"/></svg>',
     };
     return icons[kind] || icons.users;
@@ -4064,6 +4066,153 @@
     `;
   }
 
+  function openAdminStudentActionSheet(u, id) {
+    const name = u.name || 'ученика';
+    const isActive = !!u.is_active;
+    const blockLabel = isActive ? 'Заблокировать' : 'Разблокировать';
+    const blockHint = isActive
+      ? 'Ученик не сможет входить и записываться.'
+      : 'Доступ ученика снова станет активным.';
+
+    const modal = document.createElement('div');
+    modal.className = 'stu-action-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.innerHTML = `
+      <div class="stu-action-modal__backdrop" data-action="stu-sheet-close"></div>
+      <section class="stu-action-card" aria-labelledby="stu-action-title">
+        <div class="stu-action-card__ornament">
+          <span></span><i>${adminIcon('users')}</i><span></span>
+        </div>
+
+        <h3 class="stu-action-card__title" id="stu-action-title">Действия для ${escapeHTML(name)}</h3>
+        <p class="stu-action-card__subtitle">Выберите действие и подтвердите его ниже.</p>
+
+        <div class="stu-action-options">
+          <button type="button" class="stu-action-option" data-stu-action="toggle">
+            <span class="stu-action-option__icon">${adminIcon('users')}</span>
+            <span class="stu-action-option__text">
+              <strong>${blockLabel}</strong>
+              <small>${blockHint}</small>
+            </span>
+            <span class="stu-action-option__chev">›</span>
+          </button>
+
+          <button type="button" class="stu-action-option" data-stu-action="password">
+            <span class="stu-action-option__icon">${adminIcon('lock')}</span>
+            <span class="stu-action-option__text">
+              <strong>Сбросить пароль</strong>
+              <small>Задайте новый пароль для входа ученика.</small>
+            </span>
+            <span class="stu-action-option__chev">›</span>
+          </button>
+
+          <button type="button" class="stu-action-option stu-action-option--danger" data-stu-action="delete">
+            <span class="stu-action-option__icon">${adminIcon('trash')}</span>
+            <span class="stu-action-option__text">
+              <strong>Удалить</strong>
+              <small>Удаление нельзя будет отменить.</small>
+            </span>
+            <span class="stu-action-option__chev">›</span>
+          </button>
+        </div>
+
+        <label class="stu-action-password" hidden>
+          <span>Новый пароль</span>
+          <input type="password" autocomplete="new-password" placeholder="Минимум 6 символов" />
+        </label>
+
+        <p class="stu-action-status" data-render="stu-action-status">Сначала выберите действие.</p>
+
+        <div class="stu-action-footer">
+          <button type="button" class="stu-action-cancel" data-action="stu-sheet-close">Отменить</button>
+          <button type="button" class="stu-action-confirm" data-action="stu-sheet-confirm" disabled>
+            <span>${adminIcon('check')}</span> Подтвердить
+          </button>
+        </div>
+      </section>
+    `;
+
+    let selectedAction = '';
+    const status = modal.querySelector('[data-render="stu-action-status"]');
+    const confirmBtn = modal.querySelector('[data-action="stu-sheet-confirm"]');
+    const passwordWrap = modal.querySelector('.stu-action-password');
+    const passwordInput = passwordWrap?.querySelector('input');
+
+    const close = () => {
+      document.removeEventListener('keydown', onKeyDown);
+      modal.remove();
+      document.body.classList.remove('no-scroll');
+    };
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') close();
+    };
+
+    const selectAction = (action) => {
+      selectedAction = action;
+      modal.querySelectorAll('.stu-action-option').forEach((btn) => {
+        btn.classList.toggle('is-selected', btn.dataset.stuAction === action);
+      });
+      if (passwordWrap) passwordWrap.hidden = action !== 'password';
+      if (action === 'password') passwordInput?.focus();
+      status.textContent = action === 'delete'
+        ? 'Будет удалён выбранный ученик.'
+        : 'Готово к подтверждению.';
+      confirmBtn.disabled = false;
+    };
+
+    modal.querySelectorAll('[data-stu-action]').forEach((btn) => {
+      btn.addEventListener('click', () => selectAction(btn.dataset.stuAction));
+    });
+
+    modal.querySelectorAll('[data-action="stu-sheet-close"]').forEach((btn) => {
+      btn.addEventListener('click', close);
+    });
+
+    confirmBtn.addEventListener('click', async () => {
+      if (!selectedAction) return;
+      confirmBtn.disabled = true;
+      status.textContent = 'Выполняю действие...';
+
+      try {
+        if (selectedAction === 'toggle') {
+          await API.patch(`/admin/users/${encodeURIComponent(id)}`, { is_active: !isActive });
+          close();
+          await renderAdminStudentsPage();
+          return;
+        }
+
+        if (selectedAction === 'password') {
+          const pw = passwordInput?.value.trim() || '';
+          if (pw.length < 6) {
+            status.textContent = 'Пароль должен быть не короче 6 символов.';
+            confirmBtn.disabled = false;
+            passwordInput?.focus();
+            return;
+          }
+          await API.patch(`/admin/users/${encodeURIComponent(id)}`, { password: pw });
+          close();
+          alert('Пароль обновлён');
+          return;
+        }
+
+        if (selectedAction === 'delete') {
+          await API.del(`/admin/users/${encodeURIComponent(id)}`);
+          close();
+          await renderAdminStudentsPage();
+        }
+      } catch (err) {
+        status.textContent = err.message || 'Не удалось выполнить действие.';
+        confirmBtn.disabled = false;
+      }
+    });
+
+    document.body.appendChild(modal);
+    document.body.classList.add('no-scroll');
+    document.addEventListener('keydown', onKeyDown);
+  }
+
   function bindAdminStudentsActions(root) {
     // Filter chips
     root.querySelectorAll('.adm-chip').forEach((c) => {
@@ -4111,30 +4260,7 @@
           .then((arr) => arr.find((x) => x.id === id))
           .catch(() => null);
         if (!u) return alert('Ученик не найден');
-        const choice = prompt(
-          `Действия для ${u.name}:\n` +
-          `1 — ${u.is_active ? 'Заблокировать' : 'Разблокировать'}\n` +
-          `2 — Сбросить пароль\n` +
-          `3 — Удалить\n\n` +
-          `Введите номер действия:`
-        );
-        if (!choice) return;
-        try {
-          if (choice === '1') {
-            await API.patch(`/admin/users/${encodeURIComponent(id)}`, { is_active: !u.is_active });
-            await renderAdminStudentsPage();
-          } else if (choice === '2') {
-            const pw = prompt(`Новый пароль для ${u.email}:`);
-            if (!pw) return;
-            if (pw.length < 6) return alert('Минимум 6 символов');
-            await API.patch(`/admin/users/${encodeURIComponent(id)}`, { password: pw });
-            alert('Пароль обновлён');
-          } else if (choice === '3') {
-            if (!confirm(`Удалить ${u.name}? Это действие необратимо.`)) return;
-            await API.del(`/admin/users/${encodeURIComponent(id)}`);
-            await renderAdminStudentsPage();
-          }
-        } catch (err) { alert(err.message); }
+        openAdminStudentActionSheet(u, id);
       });
     });
   }
@@ -4253,13 +4379,180 @@
           <span class="adm-status-dot adm-status-dot--${t.is_active ? 'on' : 'off'}">
             ${t.is_active ? '● В каталоге' : '● Скрыт'}
           </span>
-          <button class="admin-btn ${t.is_active ? 'admin-btn--warn' : ''}" data-action="cat-toggle">
-            ${t.is_active ? 'Скрыть' : 'Показать'}
-          </button>
-          <button class="admin-btn" data-action="cat-edit">Изменить</button>
         </div>
+
+        <button class="adm-cat-card__menu" data-action="cat-menu" aria-label="Действия преподавателя">
+          ${adminIcon('more')}
+        </button>
       </article>
     `;
+  }
+
+  function openAdminTeacherActionSheet(t, id) {
+    const name = t.name || 'преподавателя';
+    const isActive = !!t.is_active;
+    const statusLabel = isActive ? 'Скрыть из каталога' : 'Показать в каталоге';
+    const statusHint = isActive
+      ? 'Преподаватель исчезнет из публичной страницы.'
+      : 'Преподаватель снова появится на сайте.';
+
+    const modal = document.createElement('div');
+    modal.className = 'stu-action-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.innerHTML = `
+      <div class="stu-action-modal__backdrop" data-action="teacher-sheet-close"></div>
+      <section class="stu-action-card" aria-labelledby="teacher-action-title">
+        <div class="stu-action-card__ornament">
+          <span></span><i>${adminIcon('teachers')}</i><span></span>
+        </div>
+
+        <h3 class="stu-action-card__title" id="teacher-action-title">Действия для ${escapeHTML(name)}</h3>
+        <p class="stu-action-card__subtitle">Выберите действие и подтвердите его ниже.</p>
+
+        <div class="stu-action-options">
+          <button type="button" class="stu-action-option" data-teacher-action="toggle">
+            <span class="stu-action-option__icon">${adminIcon('teachers')}</span>
+            <span class="stu-action-option__text">
+              <strong>${statusLabel}</strong>
+              <small>${statusHint}</small>
+            </span>
+            <span class="stu-action-option__chev">›</span>
+          </button>
+
+          <button type="button" class="stu-action-option" data-teacher-action="edit">
+            <span class="stu-action-option__icon">${adminIcon('teacher')}</span>
+            <span class="stu-action-option__text">
+              <strong>Изменить данные</strong>
+              <small>Имя, опыт и описание преподавателя.</small>
+            </span>
+            <span class="stu-action-option__chev">›</span>
+          </button>
+
+          <button type="button" class="stu-action-option stu-action-option--danger" data-teacher-action="delete">
+            <span class="stu-action-option__icon">${adminIcon('trash')}</span>
+            <span class="stu-action-option__text">
+              <strong>Удалить</strong>
+              <small>Удалятся профиль, слоты и связанные записи.</small>
+            </span>
+            <span class="stu-action-option__chev">›</span>
+          </button>
+        </div>
+
+        <div class="stu-action-edit" hidden>
+          <label>
+            <span>Имя</span>
+            <input name="name" type="text" value="${escapeAttr(t.name || '')}" />
+          </label>
+          <label>
+            <span>Опыт</span>
+            <input name="experience" type="text" value="${escapeAttr(t.experience || '')}" />
+          </label>
+          <label>
+            <span>Описание</span>
+            <textarea name="bio" rows="3">${escapeHTML(t.bio || '')}</textarea>
+          </label>
+        </div>
+
+        <p class="stu-action-status" data-render="teacher-action-status">Сначала выберите действие.</p>
+
+        <div class="stu-action-footer">
+          <button type="button" class="stu-action-cancel" data-action="teacher-sheet-close">Отменить</button>
+          <button type="button" class="stu-action-confirm" data-action="teacher-sheet-confirm" disabled>
+            <span>${adminIcon('check')}</span> Подтвердить
+          </button>
+        </div>
+      </section>
+    `;
+
+    let selectedAction = '';
+    const status = modal.querySelector('[data-render="teacher-action-status"]');
+    const confirmBtn = modal.querySelector('[data-action="teacher-sheet-confirm"]');
+    const editWrap = modal.querySelector('.stu-action-edit');
+
+    const close = () => {
+      document.removeEventListener('keydown', onKeyDown);
+      modal.remove();
+      document.body.classList.remove('no-scroll');
+    };
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') close();
+    };
+
+    const selectAction = (action) => {
+      selectedAction = action;
+      modal.querySelectorAll('.stu-action-option').forEach((btn) => {
+        btn.classList.toggle('is-selected', btn.dataset.teacherAction === action);
+      });
+      if (editWrap) editWrap.hidden = action !== 'edit';
+      status.textContent = action === 'delete'
+        ? '\u0411\u0443\u0434\u0435\u0442 \u0443\u0434\u0430\u043b\u0435\u043d \u0432\u044b\u0431\u0440\u0430\u043d\u043d\u044b\u0439 \u043f\u0440\u0435\u043f\u043e\u0434\u0430\u0432\u0430\u0442\u0435\u043b\u044c.'
+        : '\u0413\u043e\u0442\u043e\u0432\u043e \u043a \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044e.';
+      confirmBtn.disabled = false;
+      if (action === 'edit') editWrap?.querySelector('input')?.focus();
+    };
+
+    modal.querySelectorAll('[data-teacher-action]').forEach((btn) => {
+      btn.addEventListener('click', () => selectAction(btn.dataset.teacherAction));
+    });
+
+    modal.querySelectorAll('[data-action="teacher-sheet-close"]').forEach((btn) => {
+      btn.addEventListener('click', close);
+    });
+
+    confirmBtn.addEventListener('click', async () => {
+      if (!selectedAction) return;
+      confirmBtn.disabled = true;
+      status.textContent = '\u0412\u044b\u043f\u043e\u043b\u043d\u044f\u044e \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435...';
+
+      try {
+        if (selectedAction === 'toggle') {
+          await API.patch(`/admin/teachers/${encodeURIComponent(id)}`, { is_active: !isActive });
+          close();
+          await renderAdminCatalogPage();
+          return;
+        }
+
+        if (selectedAction === 'edit') {
+          const newName = modal.querySelector('[name="name"]')?.value.trim() || '';
+          const newExp = modal.querySelector('[name="experience"]')?.value.trim() || '';
+          const newBio = modal.querySelector('[name="bio"]')?.value.trim() || '';
+          if (!newName) {
+            status.textContent = '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0438\u043c\u044f \u043f\u0440\u0435\u043f\u043e\u0434\u0430\u0432\u0430\u0442\u0435\u043b\u044f.';
+            confirmBtn.disabled = false;
+            modal.querySelector('[name="name"]')?.focus();
+            return;
+          }
+          const updates = {};
+          if (newName !== (t.name || '')) updates.name = newName;
+          if (newExp !== (t.experience || '')) updates.experience = newExp;
+          if (newBio !== (t.bio || '')) updates.bio = newBio;
+          if (!Object.keys(updates).length) {
+            status.textContent = '\u0418\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u0439 \u043d\u0435\u0442.';
+            confirmBtn.disabled = false;
+            return;
+          }
+          await API.patch(`/admin/teachers/${encodeURIComponent(id)}`, updates);
+          close();
+          await renderAdminCatalogPage();
+          return;
+        }
+
+        if (selectedAction === 'delete') {
+          await API.del(`/admin/teachers/${encodeURIComponent(id)}`);
+          close();
+          await renderAdminCatalogPage();
+        }
+      } catch (err) {
+        status.textContent = err.message || '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0432\u044b\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435.';
+        confirmBtn.disabled = false;
+      }
+    });
+
+    document.body.appendChild(modal);
+    document.body.classList.add('no-scroll');
+    document.addEventListener('keydown', onKeyDown);
   }
 
   function bindAdminCatalogActions(root) {
@@ -4286,30 +4579,12 @@
 
     root.querySelectorAll('.adm-cat-card[data-id]').forEach((card) => {
       const id = card.dataset.id;
-      card.querySelector('[data-action="cat-toggle"]')?.addEventListener('click', async () => {
+      card.querySelector('[data-action="cat-menu"]')?.addEventListener('click', async () => {
         try {
           const all = await API.get('/admin/teachers');
           const t = all.find((x) => x.id === id);
           if (!t) return;
-          await API.patch(`/admin/teachers/${encodeURIComponent(id)}`, { is_active: !t.is_active });
-          await renderAdminCatalogPage();
-        } catch (err) { alert(err.message); }
-      });
-      card.querySelector('[data-action="cat-edit"]')?.addEventListener('click', async () => {
-        try {
-          const all = await API.get('/admin/teachers');
-          const t = all.find((x) => x.id === id);
-          if (!t) return;
-          const newName = prompt('Имя:', t.name || '');           if (newName === null) return;
-          const newExp  = prompt('Опыт:', t.experience || '');     if (newExp  === null) return;
-          const newBio  = prompt('Описание:', t.bio || '');        if (newBio  === null) return;
-          const updates = {};
-          if (newName !== t.name)       updates.name       = newName;
-          if (newExp  !== t.experience) updates.experience = newExp;
-          if (newBio  !== t.bio)        updates.bio        = newBio;
-          if (!Object.keys(updates).length) return;
-          await API.patch(`/admin/teachers/${encodeURIComponent(id)}`, updates);
-          await renderAdminCatalogPage();
+          openAdminTeacherActionSheet(t, id);
         } catch (err) { alert(err.message); }
       });
     });
@@ -4540,15 +4815,15 @@
         </div>
         <div class="adm-card__body">
           <form class="adm-user-form" data-user-form hidden>
-            <label>
+            <label class="adm-user-form__field adm-user-form__field--name">
               <span>Имя</span>
               <input name="name" type="text" autocomplete="name" required minlength="2" />
             </label>
-            <label>
+            <label class="adm-user-form__field adm-user-form__field--email">
               <span>Email</span>
               <input name="email" type="email" autocomplete="email" required />
             </label>
-            <label>
+            <label class="adm-user-form__field adm-user-form__field--role">
               <span>Роль</span>
               <select name="role">
                 <option value="student">Ученик</option>
@@ -4556,7 +4831,7 @@
                 <option value="admin">Администратор</option>
               </select>
             </label>
-            <label>
+            <label class="adm-user-form__field adm-user-form__field--password">
               <span>Пароль</span>
               <input name="password" type="password" autocomplete="new-password" required minlength="6" />
             </label>
