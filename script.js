@@ -4360,6 +4360,7 @@
     const reviews = Number(t.review_count) || 0;
     const rating  = Number(t.rating) || 0;
     const cap     = Math.min(100, reviews * 10);   // cosmetic activity bar
+    const bio     = String(t.bio || '').trim();
     return `
       <article class="adm-cat-card" data-id="${t.id}">
         <div class="adm-cat-card__avatar">${initialsCircle(t.name, t.photo_url)}</div>
@@ -4368,6 +4369,9 @@
           <h4 class="adm-cat-card__name">${escapeHTML(t.name || '—')}</h4>
           <p class="adm-cat-card__meta">${rating.toFixed(1)} ★ · ${reviews} ${pluralReviews(reviews)}</p>
           <p class="adm-cat-card__meta">Опыт: ${escapeHTML(t.experience || '—')}</p>
+          <p class="adm-cat-card__bio ${bio ? '' : 'adm-cat-card__bio--empty'}">
+            ${escapeHTML(bio || 'Описание не заполнено')}
+          </p>
           <p class="adm-cat-card__meta">${escapeHTML(t.email || '')}</p>
           <div class="adm-progress" style="margin-top:6px">
             <div class="adm-progress__bar" style="--p:${cap}%"></div>
@@ -4379,6 +4383,9 @@
           <span class="adm-status-dot adm-status-dot--${t.is_active ? 'on' : 'off'}">
             ${t.is_active ? '● В каталоге' : '● Скрыт'}
           </span>
+          <button type="button" class="adm-cat-card__edit" data-action="cat-edit-bio">
+            ${adminIcon('book')}<span>Описание</span>
+          </button>
         </div>
 
         <button class="adm-cat-card__menu" data-action="cat-menu" aria-label="Действия преподавателя">
@@ -4388,7 +4395,7 @@
     `;
   }
 
-  function openAdminTeacherActionSheet(t, id) {
+  function openAdminTeacherActionSheet(t, id, initialAction = '') {
     const name = t.name || 'преподавателя';
     const isActive = !!t.is_active;
     const statusLabel = isActive ? 'Скрыть из каталога' : 'Показать в каталоге';
@@ -4423,8 +4430,8 @@
           <button type="button" class="stu-action-option" data-teacher-action="edit">
             <span class="stu-action-option__icon">${adminIcon('teacher')}</span>
             <span class="stu-action-option__text">
-              <strong>Изменить данные</strong>
-              <small>Имя, опыт и описание преподавателя.</small>
+              <strong>Редактировать описание</strong>
+              <small>Имя, опыт и текст для публичной карточки преподавателя.</small>
             </span>
             <span class="stu-action-option__chev">›</span>
           </button>
@@ -4450,8 +4457,9 @@
           </label>
           <label>
             <span>Описание</span>
-            <textarea name="bio" rows="3">${escapeHTML(t.bio || '')}</textarea>
+            <textarea name="bio" rows="5" placeholder="Образование, опыт, достижения и специализация преподавателя.">${escapeHTML(t.bio || '')}</textarea>
           </label>
+          <small class="stu-action-edit__hint">Этот текст будет сохранён в базе и показан на странице преподавателей.</small>
         </div>
 
         <p class="stu-action-status" data-render="teacher-action-status">Сначала выберите действие.</p>
@@ -4490,7 +4498,7 @@
         ? '\u0411\u0443\u0434\u0435\u0442 \u0443\u0434\u0430\u043b\u0435\u043d \u0432\u044b\u0431\u0440\u0430\u043d\u043d\u044b\u0439 \u043f\u0440\u0435\u043f\u043e\u0434\u0430\u0432\u0430\u0442\u0435\u043b\u044c.'
         : '\u0413\u043e\u0442\u043e\u0432\u043e \u043a \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044e.';
       confirmBtn.disabled = false;
-      if (action === 'edit') editWrap?.querySelector('input')?.focus();
+      if (action === 'edit') (editWrap?.querySelector('textarea') || editWrap?.querySelector('input'))?.focus();
     };
 
     modal.querySelectorAll('[data-teacher-action]').forEach((btn) => {
@@ -4553,6 +4561,7 @@
     document.body.appendChild(modal);
     document.body.classList.add('no-scroll');
     document.addEventListener('keydown', onKeyDown);
+    if (initialAction) selectAction(initialAction);
   }
 
   function bindAdminCatalogActions(root) {
@@ -4579,14 +4588,17 @@
 
     root.querySelectorAll('.adm-cat-card[data-id]').forEach((card) => {
       const id = card.dataset.id;
-      card.querySelector('[data-action="cat-menu"]')?.addEventListener('click', async () => {
+      const openTeacherSheet = async (initialAction = '') => {
         try {
           const all = await API.get('/admin/teachers');
           const t = all.find((x) => x.id === id);
           if (!t) return;
-          openAdminTeacherActionSheet(t, id);
+          openAdminTeacherActionSheet(t, id, initialAction);
         } catch (err) { alert(err.message); }
-      });
+      };
+
+      card.querySelector('[data-action="cat-menu"]')?.addEventListener('click', () => openTeacherSheet());
+      card.querySelector('[data-action="cat-edit-bio"]')?.addEventListener('click', () => openTeacherSheet('edit'));
     });
   }
 

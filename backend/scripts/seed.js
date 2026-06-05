@@ -1,7 +1,7 @@
 /* =============================================================
    Seed a usable demo dataset:
      • 1 admin
-     • 2 teachers (with profiles + slots for the next 14 days)
+     • 3 teachers (with profiles + slots for the next 14 days)
      • 3 students
      • a few sample bookings + reviews
    Usage: npm run seed
@@ -103,6 +103,16 @@ async function replaceDemoTeachersForRelease() {
       email: 'teacher3@example.com',
       bio: 'Окончил Дагестанский Исламский университет. Преподаватель Хифз центра им. Хасмухаммада Абубакарова.',
       experience: 'Окончил Дагестанский Исламский университет',
+      disciplines: ['Хифз', 'Таджвид', 'Чтение', 'Индивидуально'],
+      ageGroups: ['11-15 лет', '15-20 лет', '20+'],
+      levels: ['Начальный', 'Средний', 'Продвинутый'],
+    },
+    {
+      id: IDS.teacher4,
+      name: 'Хасанафанди Гамидов',
+      email: 'teacher4@example.com',
+      bio: 'Выпускник Центра по заучиванию Корана имени Хасмухаммада Абубакарова. 2х кратный победитель республиканского конкурса хафизов, участник всероссийских и международных конкурсов.',
+      experience: 'Выпускник Центра по заучиванию Корана имени Хасмухаммада Абубакарова',
       disciplines: ['Хифз', 'Таджвид', 'Чтение', 'Индивидуально'],
       ageGroups: ['11-15 лет', '15-20 лет', '20+'],
       levels: ['Начальный', 'Средний', 'Продвинутый'],
@@ -405,7 +415,7 @@ async function replaceDemoTeachersForRelease() {
     console.log('[seed] done.');
     console.log('[seed] demo logins (password = password123):');
     console.log('  admin:    admin@example.com');
-    console.log('  teachers: teacher1@example.com (Гаджимусаев Алимирза), teacher3@example.com (Газимагомедов Саадулла Газимагомедович)');
+    console.log('  teachers: teacher1@example.com (Гаджимусаев Алимирза), teacher3@example.com (Газимагомедов Саадулла Газимагомедович), teacher4@example.com (Хасанафанди Гамидов)');
     console.log('  students: student1@example.com, student2@example.com, student3@example.com');
   } catch (err) {
     console.error('[seed] failed:', err);
