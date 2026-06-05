@@ -5825,6 +5825,60 @@ body.no-scroll { overflow: hidden; }
   gap: 6px;
   font-size: 13px;
 }
+.stu-action-photo {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+.stu-action-photo__row {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.stu-action-photo__preview {
+  width: 78px;
+  height: 78px;
+  border-radius: 18px;
+  background: rgba(233,238,226,0.85);
+  border: 1px solid rgba(45,95,63,0.14);
+  overflow: hidden;
+}
+.stu-action-photo__preview .adm-initial,
+.stu-action-photo__preview img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+.stu-action-photo__preview img {
+  object-fit: cover;
+  display: block;
+}
+.stu-action-photo__controls {
+  display: grid;
+  gap: 8px;
+}
+.stu-action-photo__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.stu-action-photo__buttons button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(45,95,63,0.2);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.9);
+  color: var(--primary);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.stu-action-photo__buttons button:hover {
+  border-color: rgba(26,92,61,0.5);
+  background: rgba(233,238,226,0.8);
+}
 .stu-action-password input,
 .stu-action-edit input,
 .stu-action-edit textarea {
@@ -5945,6 +5999,14 @@ body.no-scroll { overflow: hidden; }
   }
   .stu-action-option__text strong {
     font-size: 18px;
+  }
+  .stu-action-photo__row {
+    grid-template-columns: 64px 1fr;
+  }
+  .stu-action-photo__preview {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
   }
   .stu-action-footer {
     grid-template-columns: 1fr;

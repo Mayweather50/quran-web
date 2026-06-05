@@ -4579,6 +4579,20 @@
             <span>Описание</span>
             <textarea name="bio" rows="5" placeholder="Образование, опыт, достижения и специализация преподавателя.">${escapeHTML(t.bio || '')}</textarea>
           </label>
+          <div class="stu-action-photo">
+            <span>Фото</span>
+            <div class="stu-action-photo__row">
+              <div class="stu-action-photo__preview" data-render="teacher-photo-preview">${initialsCircle(t.name, t.photo_url)}</div>
+              <div class="stu-action-photo__controls">
+                <div class="stu-action-photo__buttons">
+                  <button type="button" data-action="teacher-photo-choose">Выбрать фото</button>
+                  <button type="button" data-action="teacher-photo-clear">Убрать</button>
+                </div>
+                <input type="file" accept="image/*" data-action="teacher-photo-input" hidden />
+                <input name="photo_url" type="url" value="${String(t.photo_url || '').startsWith('data:') ? '' : escapeAttr(t.photo_url || '')}" placeholder="Ссылка на фото, если она уже есть" />
+              </div>
+            </div>
+          </div>
           <small class="stu-action-edit__hint">Этот текст будет сохранён в базе и показан на странице преподавателей.</small>
         </div>
 
@@ -4597,6 +4611,11 @@
     const status = modal.querySelector('[data-render="teacher-action-status"]');
     const confirmBtn = modal.querySelector('[data-action="teacher-sheet-confirm"]');
     const editWrap = modal.querySelector('.stu-action-edit');
+    const photoPreview = modal.querySelector('[data-render="teacher-photo-preview"]');
+    const photoFileInput = modal.querySelector('[data-action="teacher-photo-input"]');
+    const photoUrlInput = modal.querySelector('[name="photo_url"]');
+    let selectedPhotoUrl = t.photo_url || '';
+    let photoTouched = false;
 
     const close = () => {
       document.removeEventListener('keydown', onKeyDown);
@@ -4621,12 +4640,67 @@
       if (action === 'edit') (editWrap?.querySelector('textarea') || editWrap?.querySelector('input'))?.focus();
     };
 
+    const updatePhotoPreview = () => {
+      if (!photoPreview) return;
+      const previewName = modal.querySelector('[name="name"]')?.value.trim() || name;
+      photoPreview.innerHTML = initialsCircle(previewName, selectedPhotoUrl);
+    };
+
     modal.querySelectorAll('[data-teacher-action]').forEach((btn) => {
       btn.addEventListener('click', () => selectAction(btn.dataset.teacherAction));
     });
 
     modal.querySelectorAll('[data-action="teacher-sheet-close"]').forEach((btn) => {
       btn.addEventListener('click', close);
+    });
+
+    modal.querySelector('[data-action="teacher-photo-choose"]')?.addEventListener('click', () => {
+      if (!selectedAction) selectAction('edit');
+      photoFileInput?.click();
+    });
+
+    modal.querySelector('[data-action="teacher-photo-clear"]')?.addEventListener('click', () => {
+      if (!selectedAction) selectAction('edit');
+      selectedPhotoUrl = '';
+      photoTouched = true;
+      if (photoUrlInput) photoUrlInput.value = '';
+      updatePhotoPreview();
+      status.textContent = '\u0424\u043e\u0442\u043e \u0431\u0443\u0434\u0435\u0442 \u0443\u0431\u0440\u0430\u043d\u043e \u043f\u043e\u0441\u043b\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f.';
+      confirmBtn.disabled = false;
+    });
+
+    photoUrlInput?.addEventListener('input', () => {
+      if (!selectedAction) selectAction('edit');
+      selectedPhotoUrl = photoUrlInput.value.trim();
+      photoTouched = true;
+      updatePhotoPreview();
+    });
+
+    modal.querySelector('[name="name"]')?.addEventListener('input', updatePhotoPreview);
+
+    photoFileInput?.addEventListener('change', async () => {
+      const file = photoFileInput.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        status.textContent = '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0444\u0430\u0439\u043b \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u044f.';
+        photoFileInput.value = '';
+        return;
+      }
+      if (!selectedAction) selectAction('edit');
+      confirmBtn.disabled = true;
+      status.textContent = '\u0413\u043e\u0442\u043e\u0432\u043b\u044e \u0444\u043e\u0442\u043e...';
+      try {
+        selectedPhotoUrl = await resizeImageToDataUrl(file, 720, 0.84);
+        photoTouched = true;
+        if (photoUrlInput) photoUrlInput.value = '';
+        updatePhotoPreview();
+        status.textContent = '\u0424\u043e\u0442\u043e \u0432\u044b\u0431\u0440\u0430\u043d\u043e. \u041d\u0430\u0436\u043c\u0438\u0442\u0435 \u00ab\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c\u00bb, \u0447\u0442\u043e\u0431\u044b \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c.';
+      } catch (err) {
+        status.textContent = '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u0438\u0442\u044c \u0444\u043e\u0442\u043e.';
+      } finally {
+        photoFileInput.value = '';
+        confirmBtn.disabled = false;
+      }
     });
 
     confirmBtn.addEventListener('click', async () => {
@@ -4656,6 +4730,7 @@
           if (newName !== (t.name || '')) updates.name = newName;
           if (newExp !== (t.experience || '')) updates.experience = newExp;
           if (newBio !== (t.bio || '')) updates.bio = newBio;
+          if (photoTouched && selectedPhotoUrl !== (t.photo_url || '')) updates.photo_url = selectedPhotoUrl;
           if (!Object.keys(updates).length) {
             status.textContent = '\u0418\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u0439 \u043d\u0435\u0442.';
             confirmBtn.disabled = false;
