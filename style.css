@@ -1887,6 +1887,221 @@ svg { width: 100%; height: 100%; }
 }
 .btn-solid svg { width: 16px; height: 16px; }
 
+.teacher-detail-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.teacher-detail-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(18, 25, 22, 0.55);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+
+.teacher-detail-card {
+  position: relative;
+  width: min(640px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: auto;
+  border: 1px solid rgba(196, 154, 79, 0.28);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 95% 0, rgba(196, 154, 79, 0.14), transparent 34%),
+    linear-gradient(180deg, #fffaf1 0%, #fbf4e8 100%);
+  box-shadow: 0 28px 80px rgba(21, 34, 27, 0.32);
+  padding: 28px;
+}
+
+.teacher-detail-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(45, 95, 63, 0.16);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--primary);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.teacher-detail-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 22px;
+  align-items: center;
+  padding-right: 48px;
+}
+
+.teacher-detail-photo {
+  position: relative;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #E8EFE7, #C9D9CC);
+  border: 5px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 14px 30px rgba(45, 95, 63, 0.18);
+}
+
+.teacher-detail-photo img,
+.teacher-detail-photo span {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.teacher-detail-photo img {
+  object-fit: cover;
+  z-index: 1;
+}
+
+.teacher-detail-photo span {
+  display: grid;
+  place-items: center;
+  color: var(--primary);
+  font-family: 'Lora', serif;
+  font-size: 54px;
+  font-weight: 700;
+}
+
+.teacher-detail-title span {
+  display: inline-flex;
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.teacher-detail-title h2 {
+  margin: 4px 0 8px;
+  color: var(--primary);
+  font-family: 'Lora', serif;
+  font-size: 32px;
+  line-height: 1.12;
+}
+
+.teacher-detail-title p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+.teacher-detail-bio {
+  margin: 24px 0;
+  padding: 18px 20px;
+  border: 1px solid rgba(196, 154, 79, 0.2);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.66);
+  color: var(--text);
+  font-size: 15.5px;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+
+.teacher-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.teacher-detail-grid div {
+  min-width: 0;
+  border: 1px solid rgba(45, 95, 63, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 16px;
+}
+
+.teacher-detail-grid svg {
+  width: 22px;
+  height: 22px;
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+
+.teacher-detail-grid span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.teacher-detail-grid strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.teacher-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+@media (max-width: 640px) {
+  .teacher-detail-modal {
+    align-items: end;
+    place-items: end center;
+    padding: 12px;
+  }
+
+  .teacher-detail-card {
+    max-height: calc(100vh - 24px);
+    border-radius: 24px;
+    padding: 22px 18px 18px;
+  }
+
+  .teacher-detail-head {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding-right: 44px;
+  }
+
+  .teacher-detail-photo {
+    width: 110px;
+    height: 110px;
+  }
+
+  .teacher-detail-title h2 {
+    font-size: 26px;
+  }
+
+  .teacher-detail-bio {
+    margin: 18px 0;
+    padding: 16px;
+  }
+
+  .teacher-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .teacher-detail-actions {
+    justify-content: stretch;
+  }
+
+  .teacher-detail-actions .btn-outline,
+  .teacher-detail-actions .btn-solid {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .empty-state {
   text-align: center;
   padding: 60px 20px;

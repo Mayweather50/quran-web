@@ -1899,6 +1899,49 @@
   // the active discipline chip *and* by this level.
   let _activeLevel = null;
 
+  function teacherPhotoUrl(t) {
+    const raw = String(t?.photo_url || t?.avatar_url || t?.photo || '').trim();
+    if (!raw) return '';
+    if (/^(https?:|data:|blob:|\/)/i.test(raw)) return raw;
+    return `/${raw.replace(/^\.?\//, '')}`;
+  }
+
+  function teacherInitial(t) {
+    return escapeHTML((t?.name || '?').trim().charAt(0).toUpperCase() || '?');
+  }
+
+  function teacherTextList(values, fallback = 'Не указано') {
+    if (!Array.isArray(values) || !values.length) return fallback;
+    return values.map((v) => escapeHTML(v)).join(', ');
+  }
+
+  function renderTeacherPortrait(t) {
+    const src = teacherPhotoUrl(t);
+    const img = src
+      ? `<img src="${escapeAttr(src)}" alt="${escapeAttr(t.name || 'Преподаватель')}" loading="lazy" onerror="this.remove()"/>`
+      : '';
+    return `
+      <div class="teacher-row-photo is-male">
+        ${img}
+        <span class="teacher-row-initial">${teacherInitial(t)}</span>
+        ${t.is_active ? `<span class="teacher-verified">${icon('sparkleSmall')}</span>` : ''}
+      </div>
+    `;
+  }
+
+  function renderTeacherDetailsPhoto(t) {
+    const src = teacherPhotoUrl(t);
+    const img = src
+      ? `<img src="${escapeAttr(src)}" alt="${escapeAttr(t.name || 'Преподаватель')}" loading="lazy" onerror="this.remove()"/>`
+      : '';
+    return `
+      <div class="teacher-detail-photo">
+        ${img}
+        <span>${teacherInitial(t)}</span>
+      </div>
+    `;
+  }
+
   function renderTeachersList() {
     const slot = $('[data-render="teachers-list"]');
     if (!slot) return;
@@ -1922,7 +1965,6 @@
 
     slot.innerHTML = list
       .map((t) => {
-        const initial = (t.name || '?').trim().charAt(0).toUpperCase();
         const cat = (t.disciplines && t.disciplines[0]) || 'Коран';
         const catIcon = categoryIconFor(cat);
         const rating = Number(t.rating) || 0;
@@ -1932,16 +1974,9 @@
         const expLine = t.experience
           ? `<p class="teacher-row-desc">Опыт: ${t.experience}</p>`
           : '';
-        const photo = t.photo_url
-          ? `<img src="${t.photo_url}" alt="${t.name}" onerror="this.style.display='none'"/>`
-          : '';
         return `
         <article class="teacher-row" data-teacher-id="${t.id}">
-          <div class="teacher-row-photo is-male">
-            ${photo}
-            <span class="teacher-row-initial">${initial}</span>
-            ${t.is_active ? `<span class="teacher-verified">${icon('sparkleSmall')}</span>` : ''}
-          </div>
+          ${renderTeacherPortrait(t)}
           <div class="teacher-row-body">
             <div class="teacher-row-head">
               <h3 class="teacher-row-name">${t.name}</h3>
@@ -1953,7 +1988,11 @@
             <span class="cat-pill">${icon(catIcon)} ${cat}</span>
             ${expLine}
             <div class="teacher-row-actions">
-              <button class="btn-outline" type="button">${icon('info')} Подробнее</button>
+              <button class="btn-outline" type="button"
+                      data-action="teacher-details"
+                      data-teacher-id="${escapeAttr(t.id)}">
+                ${icon('info')} Подробнее
+              </button>
               <button class="btn-solid" type="button"
                       data-action="message-teacher"
                       data-peer-id="${escapeAttr(t.user_id || t.id)}"
@@ -1967,7 +2006,88 @@
       })
       .join('');
 
+    bindTeacherDetailsActions(slot);
     bindTeacherMessageActions(slot);
+  }
+
+  function bindTeacherDetailsActions(root) {
+    root.querySelectorAll('[data-action="teacher-details"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const teacher = (_teachersCache || []).find((t) => String(t.id) === String(btn.dataset.teacherId));
+        if (teacher) openTeacherDetailsModal(teacher);
+      });
+    });
+  }
+
+  function openTeacherDetailsModal(t) {
+    document.querySelector('.teacher-detail-modal')?.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'teacher-detail-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+
+    const rating = Number(t.rating) || 0;
+    const reviews = Number(t.review_count) || 0;
+    const bookingHref = displayHrefForRoute('booking.html');
+    const bio = t.bio || t.description || 'Описание пока не добавлено администратором.';
+    const experience = t.experience ? `Опыт: ${escapeHTML(t.experience)}` : 'Опыт не указан';
+
+    modal.innerHTML = `
+      <button class="teacher-detail-backdrop" type="button" aria-label="Закрыть"></button>
+      <article class="teacher-detail-card">
+        <button class="teacher-detail-close" type="button" aria-label="Закрыть">×</button>
+        <div class="teacher-detail-head">
+          ${renderTeacherDetailsPhoto(t)}
+          <div class="teacher-detail-title">
+            <span>Преподаватель</span>
+            <h2>${escapeHTML(t.name || 'Преподаватель')}</h2>
+            <p>${experience}</p>
+          </div>
+        </div>
+        <p class="teacher-detail-bio">${escapeHTML(bio)}</p>
+        <div class="teacher-detail-grid">
+          <div>
+            ${icon('quran')}
+            <span>Дисциплины</span>
+            <strong>${teacherTextList(t.disciplines)}</strong>
+          </div>
+          <div>
+            ${icon('people')}
+            <span>Возрастные группы</span>
+            <strong>${teacherTextList(t.age_groups)}</strong>
+          </div>
+          <div>
+            ${icon('star')}
+            <span>Рейтинг</span>
+            <strong>${rating.toFixed(1)} · ${reviews} ${pluralReviews(reviews)}</strong>
+          </div>
+        </div>
+        <div class="teacher-detail-actions">
+          <a class="btn-solid" href="${escapeAttr(bookingHref)}">${icon('calIcon')} Записаться</a>
+          <button class="btn-outline" type="button"
+                  data-action="message-teacher"
+                  data-peer-id="${escapeAttr(t.user_id || t.id)}"
+                  data-teacher-name="${escapeAttr(t.name || 'преподаватель')}">
+            ${icon('message')} Написать
+          </button>
+        </div>
+      </article>
+    `;
+
+    const close = () => {
+      modal.remove();
+      document.removeEventListener('keydown', onKeydown);
+    };
+    const onKeydown = (event) => {
+      if (event.key === 'Escape') close();
+    };
+
+    modal.querySelector('.teacher-detail-backdrop')?.addEventListener('click', close);
+    modal.querySelector('.teacher-detail-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', onKeydown);
+    document.body.appendChild(modal);
+    bindTeacherMessageActions(modal);
   }
 
   function teacherChatLoginUrl() {
