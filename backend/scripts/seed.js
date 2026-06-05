@@ -85,6 +85,93 @@ async function seedSlots(teacher_id, times, capacity = 1) {
   }
 }
 
+async function replaceDemoTeachersForRelease() {
+  const releaseTeachers = [
+    {
+      id: IDS.teacher1,
+      name: 'Гаджимусаев Алимирза',
+      email: 'teacher1@example.com',
+      bio: 'Выпускник Центра заучивания Корана. Победитель республиканского конкурса хафизов, призер Всероссийского конкурса и участник международных конкурсов.',
+      experience: 'Выпускник Центра заучивания Корана',
+      disciplines: ['Хифз', 'Таджвид', 'Чтение', 'Индивидуально'],
+      ageGroups: ['11-15 лет', '15-20 лет', '20+'],
+      levels: ['Начальный', 'Средний', 'Продвинутый'],
+    },
+    {
+      id: IDS.teacher3,
+      name: 'Газимагомедов Саадулла Газимагомедович',
+      email: 'teacher3@example.com',
+      bio: 'Окончил Дагестанский Исламский университет. Преподаватель Хифз центра им. Хасмухаммада Абубакарова.',
+      experience: 'Окончил Дагестанский Исламский университет',
+      disciplines: ['Хифз', 'Таджвид', 'Чтение', 'Индивидуально'],
+      ageGroups: ['11-15 лет', '15-20 лет', '20+'],
+      levels: ['Начальный', 'Средний', 'Продвинутый'],
+    },
+  ];
+  const releaseTeacherIds = releaseTeachers.map((teacher) => teacher.id);
+
+  await upsertUser({
+    id: IDS.admin,
+    role: 'admin',
+    name: 'Администратор',
+    email: 'admin@example.com',
+  });
+  await upsertUser({
+    id: IDS.student1,
+    role: 'student',
+    name: 'Ахмад',
+    email: 'student1@example.com',
+  });
+  await upsertUser({
+    id: IDS.student2,
+    role: 'student',
+    name: 'Умар',
+    email: 'student2@example.com',
+  });
+  await upsertUser({
+    id: IDS.student3,
+    role: 'student',
+    name: 'Ибрагим',
+    email: 'student3@example.com',
+  });
+
+  for (const teacher of releaseTeachers) {
+    await upsertUser({
+      id: teacher.id,
+      role: 'teacher',
+      name: teacher.name,
+      email: teacher.email,
+    });
+  }
+
+  await query('DELETE FROM teacher_schedule_slots WHERE teacher_id = ANY($1::text[])', [releaseTeacherIds]);
+  await query('DELETE FROM bookings WHERE teacher_id = ANY($1::text[])', [releaseTeacherIds]);
+  await query('DELETE FROM reviews WHERE teacher_id = ANY($1::text[])', [releaseTeacherIds]);
+  await query('DELETE FROM chats WHERE user_a = ANY($1::text[]) OR user_b = ANY($1::text[])', [releaseTeacherIds]);
+  await query('DELETE FROM teachers WHERE NOT (id = ANY($1::text[]))', [releaseTeacherIds]);
+  await query("DELETE FROM users WHERE role = 'teacher' AND NOT (id = ANY($1::text[]))", [releaseTeacherIds]);
+
+  for (const teacher of releaseTeachers) {
+    await upsertTeacher({
+      id: teacher.id,
+      user_id: teacher.id,
+      name: teacher.name,
+      bio: teacher.bio,
+      experience: teacher.experience,
+    });
+  }
+
+  await query('DELETE FROM teacher_disciplines WHERE teacher_id = ANY($1::text[])', [releaseTeacherIds]);
+  await query('DELETE FROM teacher_age_groups WHERE teacher_id = ANY($1::text[])', [releaseTeacherIds]);
+  await query('DELETE FROM teacher_levels WHERE teacher_id = ANY($1::text[])', [releaseTeacherIds]);
+
+  for (const teacher of releaseTeachers) {
+    await attach(teacher.id, 'teacher_disciplines', 'discipline_name', teacher.disciplines);
+    await attach(teacher.id, 'teacher_age_groups', 'age_group_name', teacher.ageGroups);
+    await attach(teacher.id, 'teacher_levels', 'level_name', teacher.levels);
+  }
+}
+
 (async () => {
   try {
     console.log('[seed] users …');
@@ -312,10 +399,13 @@ async function seedSlots(teacher_id, times, capacity = 1) {
       [chatC.rows[0].id, IDS.admin]
     );
 
+    console.log('[seed] replacing demo teachers with real profile...');
+    await replaceDemoTeachersForRelease();
+
     console.log('[seed] done.');
     console.log('[seed] demo logins (password = password123):');
     console.log('  admin:    admin@example.com');
-    console.log('  teachers: teacher1@example.com, teacher3@example.com, teacher4@example.com');
+    console.log('  teachers: teacher1@example.com (Гаджимусаев Алимирза), teacher3@example.com (Газимагомедов Саадулла Газимагомедович)');
     console.log('  students: student1@example.com, student2@example.com, student3@example.com');
   } catch (err) {
     console.error('[seed] failed:', err);
