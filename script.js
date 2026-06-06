@@ -3178,7 +3178,7 @@
     const progressMeta = profileProgressMeta(progress, bookings);
     const showLearningStats = me.role === 'student';
     const subtitle = me.role === 'student'
-      ? 'Стремлюсь к знанию и довольству Аллаха'
+      ? ''
       : 'Управление профилем и учебным процессом';
     const menuRows = [
       profileMenuRow('person', 'Личные данные', '#profile-data'),
@@ -3204,7 +3204,7 @@
             <div class="profile-avatar-xl" id="profilePhotoView">${avatarBlock}</div>
             <div class="profile-main-copy">
               <h2 id="profileHeroName">${escapeHTML(me.name || 'Пользователь')}</h2>
-              <p>${escapeHTML(subtitle)}</p>
+              ${subtitle ? `<p>${escapeHTML(subtitle)}</p>` : ''}
               <span class="profile-role-pill">${icon('flower')}${escapeHTML(roleLabel)}</span>
             </div>
             <div class="profile-avatar-actions">
