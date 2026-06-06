@@ -791,15 +791,98 @@
     return (_bookingOwnBookings || []).find((b) => bookingDateOf(b) === dateIso) || null;
   }
 
-  function ownBookingMessage(dateIso, time, booking) {
+  function ownBookingDetails(dateIso, time, booking) {
     const dateText = russianDateWithYear(dateIso);
-    const teacherText = booking?.teacher_name ? ` у ${booking.teacher_name}` : '';
-    return `Вы уже записаны на урок${teacherText}: ${dateText}, ${String(time || '').slice(0, 5)}. Посмотреть запись можно в разделе «Расписание».`;
+    const timeText = String(time || '').slice(0, 5);
+    const teacherText = booking?.teacher_name || _bookingTeacher?.name || 'преподавателя';
+    return { dateText, timeText, teacherText };
+  }
+
+  function ownBookingMessage(dateIso, time, booking) {
+    const details = ownBookingDetails(dateIso, time, booking);
+    return `Вы уже записаны на урок у ${details.teacherText}: ${details.dateText}, ${details.timeText}. Посмотреть запись можно в разделе «Расписание».`;
+  }
+
+  function renderOwnBookingCard(dateIso, time, booking) {
+    const details = ownBookingDetails(dateIso, time, booking);
+    const scheduleHref = displayHrefForRoute('schedule.html');
+    return `
+      <article class="booking-own-card" role="status" aria-live="polite">
+        <div class="booking-own-card__icon" aria-hidden="true">${icon('calIcon')}</div>
+        <div class="booking-own-card__body">
+          <p class="booking-own-card__eyebrow">Вы уже записаны</p>
+          <h3 class="booking-own-card__title">${escapeHTML(details.teacherText)}</h3>
+          <div class="booking-own-card__meta" aria-label="Детали записи">
+            <span>${escapeHTML(details.dateText)}</span>
+            <span>${escapeHTML(details.timeText)}</span>
+          </div>
+          <p class="booking-own-card__text">Эта запись уже находится в вашем расписании.</p>
+        </div>
+        <a class="booking-own-card__action" href="${escapeAttr(scheduleHref)}">Открыть расписание</a>
+      </article>
+    `;
   }
 
   function showOwnBookingNotice(dateIso, time, booking) {
-    const shouldOpenSchedule = confirm(`${ownBookingMessage(dateIso, time, booking)}\n\nОткрыть расписание?`);
-    if (shouldOpenSchedule) navigateTo('schedule.html');
+    document.querySelectorAll('.auth-required-modal').forEach((node) => node.remove());
+
+    const details = ownBookingDetails(dateIso, time, booking);
+    const scheduleHref = displayHrefForRoute('schedule.html');
+
+    const modal = document.createElement('div');
+    modal.className = 'auth-required-modal booking-own-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'booking-own-title');
+    modal.innerHTML = `
+      <div class="auth-required-modal__backdrop" data-close-own-modal></div>
+      <section class="auth-required-modal__card" role="document">
+        <button class="auth-required-modal__close" type="button" data-close-own-modal aria-label="Закрыть">×</button>
+        <div class="auth-required-modal__mark" aria-hidden="true">${icon('calIcon')}</div>
+        <p class="auth-required-modal__eyebrow">Запись уже создана</p>
+        <h2 class="auth-required-modal__title" id="booking-own-title">Вы уже записаны</h2>
+        <p class="auth-required-modal__text">
+          Урок у ${escapeHTML(details.teacherText)} уже стоит в вашем расписании.
+        </p>
+        <div class="booking-own-modal__chips" aria-label="Детали записи">
+          <span>${escapeHTML(details.dateText)}</span>
+          <span>${escapeHTML(details.timeText)}</span>
+        </div>
+        <div class="auth-required-modal__actions">
+          <button class="auth-required-modal__btn auth-required-modal__btn--ghost" type="button" data-close-own-modal>Остаться</button>
+          <a class="auth-required-modal__btn auth-required-modal__btn--primary" href="${escapeAttr(scheduleHref)}">Открыть расписание</a>
+        </div>
+      </section>
+    `;
+
+    const close = () => {
+      modal.classList.add('is-leaving');
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.classList.remove('no-scroll');
+      setTimeout(() => modal.remove(), 180);
+    };
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') close();
+    };
+
+    modal.addEventListener('click', (event) => {
+      if (event.target.closest('[data-close-own-modal]')) close();
+    });
+
+    modal.querySelectorAll('a[href]').forEach((link) => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        const href = link.getAttribute('href');
+        close();
+        setTimeout(() => navigateTo(href), 120);
+      });
+    });
+
+    document.body.appendChild(modal);
+    document.body.classList.add('no-scroll');
+    document.addEventListener('keydown', onKeyDown);
+    requestAnimationFrame(() => modal.classList.add('is-open'));
   }
 
   function currentPageHrefWithState() {
@@ -1135,7 +1218,7 @@
       cta.disabled = true;
       if (note) {
         note.textContent = own
-          ? `Уже записаны: ${russianDateWithYear(bookingDateOf(own))}, ${bookingTimeOf(own)}`
+          ? 'Запись уже есть в вашем расписании'
           : 'Выберите дату со свободным временем';
       }
       return;
@@ -1185,7 +1268,7 @@
     if (!slots.length || !hasBookableSlot) {
       const own = findOwnBookingOnSelectedDay();
       slot.innerHTML = own
-        ? `<p class="empty-state">${ownBookingMessage(bookingDateOf(own), bookingTimeOf(own), own)}</p>`
+        ? renderOwnBookingCard(bookingDateOf(own), bookingTimeOf(own), own)
         : `<p class="empty-state">На этот день нет свободных слотов</p>`;
       _selectedSlotIndex = null;
       return;
@@ -1236,11 +1319,16 @@
     const slot = $('[data-render="booking-teacher"]');
     if (!slot || !DB.booking) return;
 
+    slot.classList.remove('is-empty');
+
     if (Array.isArray(_bookingDaySlots) && !getBookableBookingSlots().length) {
       const own = findOwnBookingOnSelectedDay();
-      slot.innerHTML = own
-        ? `<p class="empty-state">${ownBookingMessage(bookingDateOf(own), bookingTimeOf(own), own)}</p>`
-        : `<p class="empty-state">На выбранную дату у преподавателя нет доступного времени</p>`;
+      if (own) {
+        slot.classList.add('is-empty');
+        slot.innerHTML = '';
+      } else {
+        slot.innerHTML = `<p class="empty-state">На выбранную дату у преподавателя нет доступного времени</p>`;
+      }
       return;
     }
 
