@@ -3850,6 +3850,62 @@ svg { width: 100%; height: 100%; }
   color: var(--text);
 }
 .profile-section-card .panel-actions { margin-top: 16px; }
+.profile-privacy-note {
+  margin: -4px 0 14px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.profile-privacy-note a {
+  color: var(--primary);
+  font-weight: 800;
+  text-decoration: none;
+}
+.profile-private-details {
+  margin-top: 12px;
+  border: 1px solid rgba(31,46,37,0.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.74);
+  overflow: hidden;
+}
+.profile-private-details summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 800;
+  color: var(--primary);
+}
+.profile-private-details summary::-webkit-details-marker { display: none; }
+.profile-private-details summary span {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+.profile-private-details summary svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+.profile-private-details summary small {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+.profile-private-details[open] summary {
+  border-bottom: 1px solid rgba(31,46,37,0.07);
+}
+.profile-private-body {
+  padding: 2px 16px 16px;
+}
+.profile-private-body .panel-row {
+  margin: 0;
+}
 .profile-account-card .panel-link-row:not(:empty) { margin-bottom: 12px; }
 .profile-logout-btn {
   background: #b95b70 !important;
@@ -7091,6 +7147,13 @@ body.no-scroll { overflow: hidden; }
     flex-direction: column;
   }
   .profile-security-details summary small {
+    text-align: left;
+  }
+  .profile-private-details summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .profile-private-details summary small {
     text-align: left;
   }
   .profile-bell-btn {

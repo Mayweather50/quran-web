@@ -3248,10 +3248,17 @@
           ${menuRows}
         </section>
 
-        <section class="profile-section-card" id="profile-data">
+        <section class="profile-section-card profile-privacy-card" id="profile-data">
           <div class="profile-section-head">
             <h2>Личные данные</h2>
           </div>
+          <p class="profile-privacy-note">Личные данные скрыты по умолчанию. Перед просмотром ознакомьтесь с <a href="privacy.html">политикой конфиденциальности</a>.</p>
+          <details class="profile-private-details">
+            <summary>
+              <span>${icon('person')} Показать личные данные</span>
+              <small>Имя, email и роль</small>
+            </summary>
+            <div class="profile-private-body">
           <div class="panel-row">
             <span class="panel-label">Имя</span>
             <input class="panel-input" id="profileName" value="${escapeAttr(me.name || '')}" />
@@ -3268,6 +3275,8 @@
             <button class="btn btn--primary" id="saveNameBtn">Сохранить</button>
           </div>
           <p class="panel-msg" id="nameMsg"></p>
+            </div>
+          </details>
         </section>
 
         ${me.role === 'student' ? renderProfileBookingsCard(bookings, bookingsError) : ''}
