@@ -1915,6 +1915,10 @@
     return values.map((v) => escapeHTML(v)).join(', ');
   }
 
+  function teacherDisplayDisciplines(t) {
+    return (Array.isArray(t?.disciplines) ? t.disciplines : []).filter((name) => name !== 'Индивидуально');
+  }
+
   function renderTeacherPortrait(t) {
     const src = teacherPhotoUrl(t);
     const img = src
@@ -1965,7 +1969,8 @@
 
     slot.innerHTML = list
       .map((t) => {
-        const cat = (t.disciplines && t.disciplines[0]) || 'Коран';
+        const displayDisciplines = teacherDisplayDisciplines(t);
+        const cat = displayDisciplines[0] || 'Коран';
         const catIcon = categoryIconFor(cat);
         const rating = Number(t.rating) || 0;
         const reviews = Number(t.review_count) || 0;
@@ -2050,7 +2055,7 @@
           <div>
             ${icon('quran')}
             <span>Дисциплины</span>
-            <strong>${teacherTextList(t.disciplines)}</strong>
+            <strong>${teacherTextList(teacherDisplayDisciplines(t))}</strong>
           </div>
           <div>
             ${icon('people')}
