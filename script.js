@@ -3194,7 +3194,6 @@
         <section class="profile-hero">
           <div>
             <h1>Профиль</h1>
-            <p>Ваш путь к знаниям и близости к Аллаху</p>
           </div>
           <a class="profile-bell-btn" href="schedule.html" aria-label="Открыть расписание">${icon('bell')}</a>
         </section>
