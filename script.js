@@ -3186,7 +3186,6 @@
       profileMenuRow('clock', 'Расписание', 'schedule.html'),
       me.role === 'teacher' ? profileMenuRow('quran', 'Кабинет преподавателя', 'teacher.html') : '',
       me.role === 'admin' ? profileMenuRow('sliders', 'Админ-панель', 'admin.html') : '',
-      profileMenuRow('info', 'Политика конфиденциальности', 'privacy.html'),
     ].filter(Boolean).join('');
 
     return `
@@ -3256,7 +3255,7 @@
           <div class="profile-section-head">
             <h2>Личные данные</h2>
           </div>
-          <p class="profile-privacy-note">Личные данные скрыты по умолчанию. Перед просмотром ознакомьтесь с <a href="privacy.html">политикой конфиденциальности</a>.</p>
+          <p class="profile-privacy-note">Личные данные скрыты по умолчанию. Нажмите, чтобы открыть их.</p>
           <details class="profile-private-details">
             <summary>
               <span>${icon('person')} Показать личные данные</span>
