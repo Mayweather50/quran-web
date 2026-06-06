@@ -476,7 +476,7 @@
         const accent = i === 0 ? 'green' : 'gold';
         const timeBadge = b.date === today ? 'Сегодня' : null;
         const time = (b.time_slot || '').slice(0, 5);
-        const discipline = b.discipline || 'Урок';
+        const discipline = lessonTitle(b.discipline);
         const action = fmt.url
           ? { icon: 'video', label: 'Открыть', href: fmt.url }
           : { icon: 'calendar-add', label: 'Добавить', href: null };
@@ -494,7 +494,7 @@
                 <span class="lesson-category">${icon(categoryIconFor(discipline))}${discipline}</span>
                 <span class="lesson-status status--${b.status}">${statusLabelFor(b.status)}</span>
               </div>
-              <h3 class="lesson-title">${discipline}${b.is_public ? ' · Группа' : ''}</h3>
+              <h3 class="lesson-title">${discipline}</h3>
               <div class="lesson-teacher">
                 <span class="avatar is-male">${initial}</span>
                 <div>
@@ -552,7 +552,7 @@
         const wdLabel = WEEKDAYS_SHORT[dowIdx] || '';
         const monthShort = p ? MONTHS_SHORT[p.month - 1] : '';
         const time = (b.time_slot || '').slice(0, 5);
-        const discipline = b.discipline || 'Урок';
+        const discipline = lessonTitle(b.discipline);
         const teacherName = b.teacher_name || '';
         const statusLabel = statusLabelFor(b.status) || 'Запланирован';
 
@@ -568,7 +568,7 @@
               <span class="future-time-value">${time}</span>
             </div>
             <div class="future-body">
-              <h3 class="future-title">${discipline}${b.is_public ? ' · Группа' : ''}</h3>
+              <h3 class="future-title">${discipline}</h3>
               ${teacherName ? `<p class="future-meta">${teacherName}${discipline ? ` · ${discipline}` : ''}</p>` : ''}
               <p class="future-where">${icon(fmt.formatIcon)} ${fmt.format}${fmt.location && fmt.location !== '—' ? ` · ${fmt.location}` : ''}</p>
             </div>
@@ -1840,6 +1840,11 @@
     return { formatIcon: 'video', format: 'Онлайн', location: 'ссылка ожидается', url: null };
   }
 
+  function lessonTitle(value, fallback = 'Урок') {
+    const name = String(value || '').trim();
+    return !name || name === 'Индивидуально' ? fallback : name;
+  }
+
   let _activeFilter = 'all';
 
   function renderWelcomeCard() {
@@ -2593,11 +2598,11 @@
           <div class="t-add-slot">
             <input type="time" id="t-new-slot-time" />
             <input type="number" id="t-new-slot-cap" min="1" max="50" value="1"
-                   title="1 — индивидуальный слот, 2+ — групповой слот"
+                   title="1 — обычный слот, 2+ — групповой слот"
                    aria-label="Формат слота" />
             <button class="btn-action" id="t-add-slot-btn">Добавить слот</button>
           </div>
-          <p class="t-add-slot-hint">Поле формата: <strong>1</strong> — индивидуальный урок, <strong>2+</strong> — групповой. Это не ограничивает запись учеников.</p>
+          <p class="t-add-slot-hint">Поле формата: <strong>1</strong> — обычный урок, <strong>2+</strong> — групповой. Это не ограничивает запись учеников.</p>
         </div>
       </section>
     `;
@@ -2876,7 +2881,7 @@
         const curCap = parseInt(chip.dataset.cap, 10) || 1;
         const booked = parseInt(chip.dataset.booked, 10) || 0;
         const raw = prompt(
-          `Слот ${time}\nЗаписано учеников: ${booked}\nФормат (1 = индивидуально, 2+ = группа, не лимит мест):`,
+          `Слот ${time}\nЗаписано учеников: ${booked}\nФормат (1 = обычный урок, 2+ = группа, не лимит мест):`,
           String(curCap)
         );
         if (raw === null) return;
@@ -3088,8 +3093,8 @@
             const dateIso = bookingDateOf(b);
             const time = bookingTimeOf(b) || '—';
             const teacher = b.teacher_name || 'Преподаватель';
-            const discipline = b.discipline || 'Урок';
-            const format = b.is_public ? 'Группа' : 'Индивидуально';
+            const discipline = lessonTitle(b.discipline);
+            const bookingMeta = [discipline, b.is_public ? 'Группа' : ''].filter(Boolean).join(' · ');
             const status = b.status || 'pending';
             const meeting = b.meeting_url
               ? `<a href="${escapeAttr(b.meeting_url)}" target="_blank" rel="noopener">Ссылка на урок</a>`
@@ -3103,7 +3108,7 @@
                 </div>
                 <div class="profile-booking-main">
                   <h3>${escapeHTML(teacher)}</h3>
-                  <p>${escapeHTML(discipline)} · ${escapeHTML(format)}</p>
+                  <p>${escapeHTML(bookingMeta)}</p>
                   <div class="profile-booking-link">${meeting}</div>
                 </div>
                 <span class="profile-booking-status profile-booking-status--${escapeAttr(status)}">
@@ -3757,6 +3762,7 @@
                     const studentLabel = l.is_public
                       ? `<strong>Группа</strong>`
                       : `Ученик: <strong>${escapeHTML(l.student_name || '—')}</strong>`;
+                    const lessonName = lessonTitle(l.discipline_name);
                     return `
                     <div class="adm-lesson" data-id="${l.id}">
                       <div class="adm-lesson__when ${l.status === 'confirmed' ? 'is-confirmed' : ''}">
@@ -3767,7 +3773,7 @@
                       <div class="adm-lesson__main">
                         <p class="adm-lesson__teacher">${escapeHTML(l.teacher_name || '—')}</p>
                         <p class="adm-lesson__sub">${studentLabel}</p>
-                        <p class="adm-lesson__sub">${escapeHTML(l.discipline_name || '—')} · ${l.is_public ? 'Группа' : 'Индивидуально'}</p>
+                        <p class="adm-lesson__sub">${escapeHTML(lessonName)}</p>
                         <span class="adm-status adm-status--${l.status}">${statusLabel(l.status)}</span>
                       </div>
                     </div>
