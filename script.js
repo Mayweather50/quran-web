@@ -802,6 +802,70 @@
     if (shouldOpenSchedule) navigateTo('schedule.html');
   }
 
+  function currentPageHrefWithState() {
+    return fetchHrefForRoute(`${window.location.pathname}${window.location.search}${window.location.hash}`);
+  }
+
+  function showLoginRequiredModal() {
+    document.querySelectorAll('.auth-required-modal').forEach((node) => node.remove());
+
+    const next = currentPageHrefWithState() || 'booking.html';
+    const loginHref = displayHrefForRoute(`login.html?next=${encodeURIComponent(next)}`);
+    const registerHref = displayHrefForRoute(`register.html?next=${encodeURIComponent(next)}`);
+
+    const modal = document.createElement('div');
+    modal.className = 'auth-required-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'auth-required-title');
+    modal.innerHTML = `
+      <div class="auth-required-modal__backdrop" data-close-auth-modal></div>
+      <section class="auth-required-modal__card" role="document">
+        <button class="auth-required-modal__close" type="button" data-close-auth-modal aria-label="Закрыть">×</button>
+        <div class="auth-required-modal__mark" aria-hidden="true">${icon('person')}</div>
+        <p class="auth-required-modal__eyebrow">Запись доступна ученикам</p>
+        <h2 class="auth-required-modal__title" id="auth-required-title">Войдите, чтобы записаться</h2>
+        <p class="auth-required-modal__text">
+          Авторизуйтесь как ученик, и мы вернем вас к выбранной дате и времени урока.
+        </p>
+        <div class="auth-required-modal__actions">
+          <button class="auth-required-modal__btn auth-required-modal__btn--ghost" type="button" data-close-auth-modal>Отмена</button>
+          <a class="auth-required-modal__btn auth-required-modal__btn--primary" href="${escapeAttr(loginHref)}">Войти</a>
+        </div>
+        <a class="auth-required-modal__register" href="${escapeAttr(registerHref)}">Создать аккаунт ученика</a>
+      </section>
+    `;
+
+    const close = () => {
+      modal.classList.add('is-leaving');
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.classList.remove('no-scroll');
+      setTimeout(() => modal.remove(), 180);
+    };
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') close();
+    };
+
+    modal.addEventListener('click', (event) => {
+      if (event.target.closest('[data-close-auth-modal]')) close();
+    });
+
+    modal.querySelectorAll('a[href]').forEach((link) => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        const href = link.getAttribute('href');
+        close();
+        setTimeout(() => navigateTo(href), 120);
+      });
+    });
+
+    document.body.appendChild(modal);
+    document.body.classList.add('no-scroll');
+    document.addEventListener('keydown', onKeyDown);
+    requestAnimationFrame(() => modal.classList.add('is-open'));
+  }
+
   // Day-of-month + currently viewed month  ->  'YYYY-MM-DD'
   function bookingDateIso(day) {
     const year  = _bookingViewYear  ?? DB.booking?.calendar?.year;
@@ -1362,7 +1426,7 @@
 
     // Visually disable the CTA + change the note for non-student users.
     // Anonymous users keep the normal-looking button (click handler shows
-    // "Войдите, чтобы записаться на урок" alert).
+    // the branded login modal).
     syncBookingCtaState();
 
     cta?.addEventListener('click', async () => {
@@ -1371,7 +1435,7 @@
       // ── Auth gate ────────────────────────────────────────────
       const user = API.getUser();
       if (!API.getToken() || !user) {
-        alert('Войдите, чтобы записаться на урок');
+        showLoginRequiredModal();
         return;
       }
       if (user.role !== 'student') {
