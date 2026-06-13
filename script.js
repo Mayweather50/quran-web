@@ -1974,6 +1974,7 @@
       confirmed: 'Подтверждён',
       cancelled: 'Отменён',
       completed: 'Завершён',
+      available: 'Свободен',
     })[status] || status || '';
   }
 
@@ -2732,7 +2733,7 @@
     root.innerHTML = `
       <header class="teacher-hello">
         <h1>Кабинет преподавателя</h1>
-        <p>Здравствуйте, ${_teacherProfile.name || 'преподаватель'}</p>
+        <p>${_teacherProfile.name || 'Преподаватель'}</p>
       </header>
       <section class="teacher-section">
         <h2>Мои уроки</h2>
@@ -3142,6 +3143,395 @@
       await reloadTeacherSlotsForDay();
     } catch (err) {
       alert(err.message);
+    }
+  }
+
+  // ====================================================
+  // TEACHER DASHBOARD RELEASE OVERRIDES
+  // ====================================================
+  function teacherAttr(value) {
+    return escapeHTML(value == null ? '' : String(value)).replace(/"/g, '&quot;');
+  }
+
+  function teacherCleanSubject(value) {
+    const text = String(value || '').trim();
+    const hidden = ['индивидуально', 'группа', 'офлайн', 'свободный слот'];
+    return hidden.includes(text.toLowerCase()) ? '' : text;
+  }
+
+  function teacherDateOf(item) {
+    return item?.date || item?.lesson_date || item?.slot_date || '';
+  }
+
+  function teacherTimeOf(item) {
+    return (item?.time_slot || item?.slot_time || item?.time || '').slice(0, 5);
+  }
+
+  function teacherMeetingOf(item) {
+    return item?.meeting_url || item?.meeting_link || '';
+  }
+
+  function teacherIsFreeSlot(item) {
+    return item?.item_type === 'slot' || String(item?.id || '').startsWith('slot:') || item?.status === 'available';
+  }
+
+  function teacherStatusLabel(status, isSlot) {
+    if (isSlot) return 'Свободен';
+    if (status === 'pending') return 'Ожидает';
+    if (status === 'confirmed') return 'Подтверждён';
+    if (status === 'cancelled') return 'Отменён';
+    return statusLabelFor(status || 'pending');
+  }
+
+  function teacherStatusClass(status, isSlot) {
+    if (isSlot) return 'available';
+    if (status === 'confirmed') return 'ok';
+    if (status === 'cancelled') return 'cancelled';
+    return 'pending';
+  }
+
+  function teacherStudentName(item, isSlot) {
+    if (isSlot) return 'Свободный слот';
+    return item?.student_name || item?.student || 'Ученик';
+  }
+
+  function teacherLessonDateText(date) {
+    return date ? russianDateLong(date) : '';
+  }
+
+  function teacherEmptyCard(title, text) {
+    return `
+      <div class="teacher-empty-card">
+        <div class="teacher-empty-icon">${icon('calendar-add')}</div>
+        <strong>${escapeHTML(title)}</strong>
+        <span>${escapeHTML(text)}</span>
+      </div>
+    `;
+  }
+
+  async function initTeacher() {
+    const root = $('[data-render="teacher-dashboard"]');
+    if (!root) return;
+
+    const user = getAuthUser();
+    if (!user || user.role !== 'teacher') {
+      root.innerHTML = `<div class="admin-empty-state">Войдите как преподаватель, чтобы открыть кабинет.</div>`;
+      return;
+    }
+
+    root.innerHTML = `
+      <header class="teacher-release-hero">
+        <span class="teacher-release-kicker">Кабинет</span>
+        <h1>Кабинет преподавателя</h1>
+        <p>Управляйте уроками, ссылками и расписанием</p>
+      </header>
+
+      <section class="teacher-section teacher-release-lessons">
+        <div data-render="teacher-bookings">
+          <div class="admin-empty-state">Загрузка уроков...</div>
+        </div>
+      </section>
+
+      <section class="teacher-section teacher-release-slots">
+        <div class="teacher-section-head">
+          <div>
+            <span class="teacher-release-kicker">Расписание</span>
+            <h2>Слоты преподавателя</h2>
+          </div>
+          <span class="teacher-schedule-note">Вт, Чт, Сб · 10:00, 18:00, 20:00</span>
+        </div>
+        <div data-render="teacher-slots-calendar"></div>
+        <div class="t-slots-day">
+          <h3 class="teacher-block-title" data-render="teacher-slots-day-title">Выбранный день</h3>
+          <div class="t-slots-list" data-render="teacher-slots-list">
+            <p class="empty-state">Загрузка слотов...</p>
+          </div>
+          <div class="t-slot-link-editor" data-render="teacher-slot-link-editor" hidden></div>
+          <div class="t-add-slot">
+            <input type="time" id="t-new-slot-time" />
+            <button class="btn-action" id="t-add-slot-btn" type="button">Добавить слот</button>
+          </div>
+        </div>
+      </section>
+    `;
+
+    try {
+      _teacherProfile = await API.get('/teacher/me');
+      await reloadTeacherSchedule();
+      const today = todayIsoLocal();
+      _teacherSlotDate = today;
+      const parts = dateParts(today);
+      _teacherSlotsViewYear = parts.year;
+      _teacherSlotsViewMonth = parts.month;
+      renderTeacherSlotsCalendar();
+      await reloadTeacherSlotsForDay();
+      $('#t-add-slot-btn')?.addEventListener('click', addTeacherSlot);
+    } catch (err) {
+      root.innerHTML = `<div class="admin-empty-state">Не удалось загрузить кабинет преподавателя.</div>`;
+    }
+  }
+
+  function renderTeacherBookings() {
+    const root = $('[data-render="teacher-bookings"]');
+    if (!root) return;
+    const schedule = _teacherSchedule || { today: [], upcoming: [], past: [] };
+    const sections = [
+      { key: 'today', title: 'Сегодня', empty: 'На сегодня уроков нет', accent: 'green' },
+      { key: 'upcoming', title: 'Предстоящие', empty: 'Ближайшие уроки и свободные слоты появятся здесь', accent: 'gold' },
+      { key: 'past', title: 'Прошедшие', empty: 'Завершённые уроки будут отображаться здесь', accent: 'muted' },
+    ];
+
+    root.innerHTML = sections.map((section) => {
+      const items = schedule[section.key] || [];
+      return `
+        <div class="teacher-bookings-block teacher-bookings-block--${section.key}">
+          <h2 class="teacher-block-title">
+            <span class="teacher-block-icon">${section.key === 'today' ? icon('calIcon') : section.key === 'upcoming' ? icon('calendar-add') : icon('clock')}</span>
+            ${section.title}
+          </h2>
+          <div class="teacher-bookings-list">
+            ${items.length ? items.map((item) => bookingRowHtml(item, section.accent)).join('') : teacherEmptyCard(section.empty, 'Вы можете управлять расписанием ниже.')}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    bindTeacherBookingActions(root);
+  }
+
+  function bookingRowHtml(item, accent = 'green') {
+    const isSlot = teacherIsFreeSlot(item);
+    const date = teacherDateOf(item);
+    const time = teacherTimeOf(item);
+    const meetingUrl = teacherMeetingOf(item);
+    const status = item.status || 'pending';
+    const statusClass = teacherStatusClass(status, isSlot);
+    const subject = isSlot ? 'Можно заранее добавить ссылку на урок' : teacherCleanSubject(item.discipline_name || item.subject || '');
+    const studentName = teacherStudentName(item, isSlot);
+    const initials = studentName.trim().charAt(0).toUpperCase() || 'У';
+    const teacherId = item.teacher_id || _teacherProfile?.id || '';
+    const itemId = item.id || '';
+    const slotId = item.slot_id || (isSlot ? String(itemId).replace(/^slot:/, '') : '');
+
+    return `
+      <article class="t-booking t-booking--${teacherAttr(accent)}"
+        data-id="${teacherAttr(itemId)}"
+        data-kind="${isSlot ? 'slot' : 'booking'}"
+        data-slot-id="${teacherAttr(slotId)}"
+        data-teacher-id="${teacherAttr(teacherId)}"
+        data-date="${teacherAttr(date)}"
+        data-time="${teacherAttr(time)}">
+        <div class="t-booking-time t-booking-time--${teacherAttr(accent)}">
+          <strong class="t-time">${escapeHTML(time || '--:--')}</strong>
+          <span class="t-date">${escapeHTML(teacherLessonDateText(date))}</span>
+          <span class="t-moon">${icon('moon')}</span>
+        </div>
+        <div class="t-booking-main">
+          <div class="t-booking-student">
+            <span class="avatar-mini">${escapeHTML(initials)}</span>
+            <div>
+              <strong>${escapeHTML(studentName)}</strong>
+              ${subject ? `<small>${escapeHTML(subject)}</small>` : ''}
+            </div>
+          </div>
+          <span class="status-pill status-pill--${teacherAttr(statusClass)}">${escapeHTML(teacherStatusLabel(status, isSlot))}</span>
+        </div>
+        <div class="t-booking-actions">
+          ${!isSlot && status === 'pending' ? `<button class="btn-soft btn-soft--ok" type="button" data-action="confirm">Подтвердить</button>` : ''}
+          ${!isSlot && status !== 'cancelled' ? `<button class="btn-soft btn-soft--danger" type="button" data-action="cancel">Отменить</button>` : ''}
+          <button class="btn-soft btn-soft--gold" type="button" data-action="link-toggle">${meetingUrl ? 'Изменить ссылку' : 'Добавить ссылку'}</button>
+          ${meetingUrl ? `<a class="btn-soft" href="${teacherAttr(meetingUrl)}" target="_blank" rel="noopener">Открыть</a>` : ''}
+        </div>
+        <div class="t-booking-link" hidden>
+          <input type="url" value="${teacherAttr(meetingUrl)}" placeholder="https://zoom.us/j/..." />
+          <button class="btn-action" type="button" data-action="link-save">Сохранить</button>
+        </div>
+      </article>
+    `;
+  }
+
+  function bindTeacherBookingActions(root) {
+    root.querySelectorAll('[data-action]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const card = btn.closest('.t-booking');
+        if (!card) return;
+        const action = btn.dataset.action;
+        const id = card.dataset.id;
+        const kind = card.dataset.kind;
+
+        try {
+          if (action === 'link-toggle') {
+            const row = $('.t-booking-link', card);
+            if (row) row.hidden = !row.hidden;
+            return;
+          }
+
+          if (action === 'confirm') {
+            await API.patch(`/bookings/${encodeURIComponent(id)}`, { status: 'confirmed' });
+          } else if (action === 'cancel') {
+            await API.patch(`/bookings/${encodeURIComponent(id)}`, { status: 'cancelled' });
+          } else if (action === 'link-save') {
+            const input = $('.t-booking-link input', card);
+            const url = input?.value.trim() || null;
+            if (kind === 'slot') {
+              await API.patch(`/teachers/${encodeURIComponent(card.dataset.teacherId)}/slots`, {
+                date: card.dataset.date,
+                time: card.dataset.time,
+                meeting_url: url,
+                meeting_provider: detectMeetingProvider(url),
+              });
+            } else {
+              await API.patch(`/bookings/${encodeURIComponent(id)}`, {
+                meeting_url: url,
+                meeting_provider: detectMeetingProvider(url),
+              });
+            }
+          }
+
+          await reloadTeacherSchedule();
+          if (_teacherSlotDate) await reloadTeacherSlotsForDay();
+        } catch (err) {
+          alert(err.message || 'Не удалось выполнить действие');
+        }
+      });
+    });
+  }
+
+  async function reloadTeacherSchedule() {
+    _teacherSchedule = await API.get('/teacher/me/schedule');
+    renderTeacherBookings();
+  }
+
+  async function reloadTeacherSlotsForDay() {
+    if (!_teacherProfile?.id || !_teacherSlotDate) return;
+    const title = $('[data-render="teacher-slots-day-title"]');
+    const list = $('[data-render="teacher-slots-list"]');
+    const editor = $('[data-render="teacher-slot-link-editor"]');
+    if (!list) return;
+
+    const d = new Date(`${_teacherSlotDate}T00:00:00`);
+    if (title) {
+      title.textContent = `Слоты на ${d.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}`;
+    }
+
+    list.innerHTML = '<p class="empty-state">Загрузка...</p>';
+    if (editor) {
+      editor.hidden = true;
+      editor.innerHTML = '';
+    }
+
+    try {
+      const slots = await API.get(`/teacher/me/slots?date=${encodeURIComponent(_teacherSlotDate)}`);
+      list.innerHTML = slots.length ? slots.map((slot) => {
+        const time = (slot.slot_time || '').slice(0, 5);
+        const hasLink = !!slot.meeting_url;
+        const booked = Number(slot.booked || 0);
+        return `
+          <div class="t-slot-chip" data-time="${teacherAttr(time)}">
+            <strong>${escapeHTML(time)}</strong>
+            ${booked > 0 ? `<span class="t-slot-cap">${booked} запис.</span>` : ''}
+            ${hasLink ? `<span class="t-slot-link-badge">Ссылка</span>` : ''}
+            <button class="icon-mini" type="button" data-action="slot-link" title="Ссылка">${icon('video')}</button>
+            ${booked === 0 ? `<button class="icon-mini" type="button" data-action="slot-delete" title="Удалить">×</button>` : ''}
+          </div>
+        `;
+      }).join('') : teacherEmptyCard('На этот день слотов нет', 'Добавьте время ниже или выберите другой день.');
+
+      list.querySelectorAll('[data-action="slot-link"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const time = btn.closest('.t-slot-chip')?.dataset.time;
+          _teacherSlotLinkEditorTime = time;
+          renderTeacherSlotLinkEditor(slots);
+        });
+      });
+      list.querySelectorAll('[data-action="slot-delete"]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const time = btn.closest('.t-slot-chip')?.dataset.time;
+          if (!time || !confirm(`Удалить слот ${time}?`)) return;
+          await API.del(`/teachers/${encodeURIComponent(_teacherProfile.id)}/slots`, { date: _teacherSlotDate, time });
+          await reloadTeacherSlotsForDay();
+          await reloadTeacherSchedule();
+        });
+      });
+    } catch (err) {
+      list.innerHTML = `<p class="empty-state">Не удалось загрузить слоты.</p>`;
+    }
+  }
+
+  function renderTeacherSlotLinkEditor(slots) {
+    const editor = $('[data-render="teacher-slot-link-editor"]');
+    if (!editor) return;
+    const slot = slots.find((item) => (item.slot_time || '').slice(0, 5) === _teacherSlotLinkEditorTime);
+    if (!slot) {
+      editor.hidden = true;
+      return;
+    }
+    const time = (slot.slot_time || '').slice(0, 5);
+    editor.hidden = false;
+    editor.innerHTML = `
+      <div class="slot-link-card">
+        <div>
+          <span class="teacher-release-kicker">Онлайн-ссылка</span>
+          <h3>Ссылка для слота ${escapeHTML(time)}</h3>
+          <p>Она автоматически появится у учеников, которые запишутся на этот урок.</p>
+        </div>
+        <div class="slot-link-controls">
+          <input type="url" value="${teacherAttr(slot.meeting_url || '')}" placeholder="https://zoom.us/j/..." />
+          <button class="btn-action" type="button" data-action="slot-link-save">Сохранить</button>
+          <button class="btn-soft" type="button" data-action="slot-link-clear">Убрать</button>
+          <button class="icon-mini" type="button" data-action="slot-link-close">×</button>
+        </div>
+      </div>
+    `;
+
+    $('[data-action="slot-link-close"]', editor)?.addEventListener('click', () => {
+      editor.hidden = true;
+      editor.innerHTML = '';
+    });
+    $('[data-action="slot-link-save"]', editor)?.addEventListener('click', async () => {
+      const url = $('input', editor)?.value.trim() || null;
+      await API.patch(`/teachers/${encodeURIComponent(_teacherProfile.id)}/slots`, {
+        date: _teacherSlotDate,
+        time,
+        meeting_url: url,
+        meeting_provider: detectMeetingProvider(url),
+      });
+      await reloadTeacherSlotsForDay();
+      await reloadTeacherSchedule();
+    });
+    $('[data-action="slot-link-clear"]', editor)?.addEventListener('click', async () => {
+      await API.patch(`/teachers/${encodeURIComponent(_teacherProfile.id)}/slots`, {
+        date: _teacherSlotDate,
+        time,
+        meeting_url: null,
+        meeting_provider: null,
+      });
+      await reloadTeacherSlotsForDay();
+      await reloadTeacherSchedule();
+    });
+  }
+
+  async function addTeacherSlot() {
+    if (!_teacherProfile?.id || !_teacherSlotDate) return;
+    const time = $('#t-new-slot-time')?.value;
+    if (!time) {
+      alert('Выберите время слота');
+      return;
+    }
+
+    try {
+      await API.post(`/teachers/${encodeURIComponent(_teacherProfile.id)}/slots`, {
+        date: _teacherSlotDate,
+        time,
+        capacity: 1,
+      });
+      const input = $('#t-new-slot-time');
+      if (input) input.value = '';
+      await reloadTeacherSlotsForDay();
+      await reloadTeacherSchedule();
+      renderTeacherSlotsCalendar();
+    } catch (err) {
+      alert(err.message || 'Не удалось добавить слот');
     }
   }
 

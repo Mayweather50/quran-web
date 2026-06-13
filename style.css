@@ -37,6 +37,457 @@
   --tabs-h: 76px;
 }
 
+/* Teacher cabinet release layout */
+.page-teacher [data-render="teacher-dashboard"] {
+  width: min(1320px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 34px 0 86px;
+}
+
+.teacher-release-hero {
+  position: relative;
+  padding: 18px 0 24px;
+}
+
+.teacher-release-hero::after {
+  content: "";
+  position: absolute;
+  right: 2%;
+  top: -16px;
+  width: 160px;
+  height: 110px;
+  border-radius: 28px;
+  background: radial-gradient(circle at 50% 18%, rgba(196, 154, 79, .18), transparent 58%),
+              linear-gradient(135deg, rgba(45, 95, 63, .10), rgba(255, 255, 255, 0));
+  opacity: .75;
+  pointer-events: none;
+}
+
+.teacher-release-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gold-dark);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.teacher-release-hero h1 {
+  margin: 6px 0 8px;
+  color: var(--primary-dark);
+  font-family: 'Lora', serif;
+  font-size: clamp(30px, 4vw, 44px);
+  line-height: 1.05;
+}
+
+.teacher-release-hero p {
+  max-width: 560px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.teacher-section {
+  margin-top: 22px;
+  border: 1px solid rgba(196, 154, 79, .24);
+  border-radius: 26px;
+  background: rgba(255, 253, 248, .94);
+  box-shadow: 0 22px 50px rgba(43, 77, 55, .09);
+}
+
+.teacher-release-lessons,
+.teacher-release-slots {
+  padding: 24px;
+}
+
+.teacher-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.teacher-section-head h2 {
+  margin: 4px 0 0;
+  color: var(--primary-dark);
+  font-family: 'Lora', serif;
+  font-size: 28px;
+}
+
+.teacher-schedule-note {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(196, 154, 79, .28);
+  border-radius: 999px;
+  color: var(--primary);
+  background: rgba(255, 248, 231, .72);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.teacher-bookings-block {
+  margin-bottom: 26px;
+}
+
+.teacher-bookings-block:last-child {
+  margin-bottom: 0;
+}
+
+.teacher-block-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  color: var(--primary-dark);
+  font-family: 'Lora', serif;
+  font-size: 25px;
+  line-height: 1.15;
+}
+
+.teacher-block-icon {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--primary);
+  background: rgba(45, 95, 63, .10);
+}
+
+.teacher-block-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.teacher-bookings-list {
+  display: grid;
+  gap: 16px;
+}
+
+.t-booking {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  gap: 18px 22px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(196, 154, 79, .28);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 96% 8%, rgba(196, 154, 79, .10), transparent 28%),
+    rgba(255, 255, 255, .84);
+  box-shadow: 0 12px 28px rgba(36, 55, 40, .07);
+}
+
+.t-booking-time {
+  min-height: 118px;
+  padding: 18px 12px;
+  border-radius: 17px;
+  background: rgba(255, 253, 248, .96);
+  border: 1px solid rgba(196, 154, 79, .25);
+  text-align: center;
+}
+
+.t-booking-time--green {
+  border-left: 5px solid var(--primary);
+}
+
+.t-booking-time--gold {
+  border-left: 5px solid var(--gold);
+}
+
+.t-booking-time--muted {
+  border-left: 5px solid rgba(125, 134, 123, .45);
+}
+
+.t-time {
+  display: block;
+  color: var(--primary);
+  font-family: 'Lora', serif;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.t-date {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.t-moon {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  margin-top: 10px;
+  place-items: center;
+  color: var(--gold);
+}
+
+.t-moon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.t-booking-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.t-booking-student {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.t-booking-student .avatar-mini {
+  flex: 0 0 auto;
+}
+
+.t-booking-student strong {
+  display: block;
+  color: var(--primary-dark);
+  font-family: 'Lora', serif;
+  font-size: 21px;
+  line-height: 1.15;
+}
+
+.t-booking-student small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  white-space: normal;
+}
+
+.status-pill--available {
+  color: #8b651d;
+  background: rgba(196, 154, 79, .16);
+}
+
+.t-booking-actions {
+  grid-column: 2 / 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(196, 154, 79, .18);
+}
+
+.t-booking-link {
+  grid-column: 2 / 4;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.t-booking-link[hidden] {
+  display: none !important;
+}
+
+.t-booking-link input,
+.slot-link-controls input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(45, 95, 63, .20);
+  border-radius: 12px;
+  padding: 0 14px;
+  font: inherit;
+  background: rgba(255, 255, 255, .92);
+}
+
+.teacher-empty-card {
+  display: grid;
+  min-height: 150px;
+  place-items: center;
+  gap: 8px;
+  padding: 24px;
+  border: 1px dashed rgba(196, 154, 79, .36);
+  border-radius: 18px;
+  color: var(--muted);
+  text-align: center;
+  background: linear-gradient(135deg, rgba(255, 248, 231, .56), rgba(255, 255, 255, .78));
+}
+
+.teacher-empty-card strong {
+  color: var(--primary-dark);
+  font-family: 'Lora', serif;
+  font-size: 20px;
+}
+
+.teacher-empty-icon {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--gold-dark);
+  background: rgba(196, 154, 79, .16);
+}
+
+.teacher-empty-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.t-slot-cap,
+.t-slot-link-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: #8b651d;
+  background: rgba(196, 154, 79, .16);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.t-slots-day {
+  margin-top: 20px;
+}
+
+.t-slots-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.t-slot-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 7px 10px 7px 14px;
+  border: 1px solid rgba(196, 154, 79, .34);
+  border-radius: 999px;
+  background: rgba(255, 248, 231, .72);
+}
+
+.t-slot-chip strong {
+  color: var(--primary-dark);
+}
+
+.slot-link-card {
+  display: grid;
+  gap: 14px;
+  margin: 16px 0;
+  padding: 18px;
+  border: 1px solid rgba(45, 95, 63, .18);
+  border-radius: 18px;
+  background: rgba(246, 250, 246, .88);
+}
+
+.slot-link-card h3 {
+  margin: 4px 0;
+  color: var(--primary-dark);
+  font-family: 'Lora', serif;
+}
+
+.slot-link-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.slot-link-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.t-add-slot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.t-add-slot input {
+  min-height: 42px;
+  border: 1px solid rgba(45, 95, 63, .20);
+  border-radius: 12px;
+  padding: 0 12px;
+  font: inherit;
+  background: #fff;
+}
+
+.t-slot-edit,
+.t-add-slot-hint {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .page-teacher [data-render="teacher-dashboard"] {
+    width: min(100% - 24px, 720px);
+    padding-top: 22px;
+  }
+
+  .teacher-section {
+    border-radius: 20px;
+  }
+
+  .teacher-release-lessons,
+  .teacher-release-slots {
+    padding: 16px;
+  }
+
+  .teacher-section-head {
+    display: block;
+  }
+
+  .teacher-schedule-note {
+    margin-top: 12px;
+    white-space: normal;
+  }
+
+  .t-booking {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .t-booking-time {
+    min-height: auto;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+  }
+
+  .t-date {
+    margin-top: 0;
+  }
+
+  .t-booking-main,
+  .t-booking-actions,
+  .t-booking-link {
+    grid-column: 1;
+  }
+
+  .t-booking-main {
+    align-items: flex-start;
+  }
+
+  .t-booking-link,
+  .slot-link-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .t-booking-actions .btn-soft,
+  .slot-link-controls .btn-action,
+  .slot-link-controls .btn-soft {
+    width: 100%;
+  }
+}
+
 /* =========================================================
    RESET
 ========================================================= */

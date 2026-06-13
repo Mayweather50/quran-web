@@ -73,7 +73,7 @@ router.get('/me/schedule', requireRole('teacher'), async (req, res, next) => {
     const todayStr = new Date().toISOString().slice(0, 10);
 
     for (const b of r.rows) {
-      const d = b.date;                                // already 'YYYY-MM-DD'
+      const d = String(b.date).slice(0, 10);           // already 'YYYY-MM-DD'
       if (b.status === 'cancelled' || b.status === 'completed') {
         past.push(b);
       } else if (d === todayStr) {
@@ -84,6 +84,65 @@ router.get('/me/schedule', requireRole('teacher'), async (req, res, next) => {
         past.push(b);
       }
     }
+
+    const slotsSql = `
+      SELECT
+        s.id,
+        s.teacher_id,
+        s.slot_date AS date,
+        s.slot_time AS time_slot,
+        s.duration_minutes,
+        s.capacity,
+        s.meeting_provider,
+        s.meeting_url
+      FROM teacher_schedule_slots s
+      WHERE s.teacher_id = $1
+        AND s.is_available = TRUE
+        AND s.slot_date >= CURRENT_DATE
+        AND NOT EXISTS (
+          SELECT 1
+          FROM bookings b
+          WHERE b.teacher_id = s.teacher_id
+            AND b.lesson_date = s.slot_date
+            AND b.time_slot = s.slot_time
+            AND b.status IN ('pending','confirmed')
+        )
+      ORDER BY s.slot_date, s.slot_time
+      LIMIT 100
+    `;
+    const slots = await query(slotsSql, [t.id]);
+
+    for (const s of slots.rows) {
+      const d = String(s.date).slice(0, 10);
+      const item = {
+        id: `slot:${s.id}`,
+        slot_id: s.id,
+        item_type: 'slot',
+        teacher_id: s.teacher_id,
+        date: d,
+        time_slot: s.time_slot,
+        status: 'available',
+        discipline_name: 'Свободный слот',
+        is_public: false,
+        meeting_provider: s.meeting_provider,
+        meeting_url: s.meeting_url,
+        duration_minutes: s.duration_minutes,
+        capacity: s.capacity,
+      };
+      if (d === todayStr) {
+        today.push(item);
+      } else if (d > todayStr) {
+        upcoming.push(item);
+      }
+    }
+
+    const byDateTime = (a, b) =>
+      String(a.date).localeCompare(String(b.date)) ||
+      String(a.time_slot || '').localeCompare(String(b.time_slot || ''));
+
+    today.sort(byDateTime);
+    upcoming.sort(byDateTime);
+    past.sort(byDateTime);
 
     res.json({ teacher_id: t.id, today, upcoming, past });
   } catch (err) {
